@@ -67,7 +67,7 @@ include 'includes/header.php';
         </div>
         <a href="https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe"
            class="btn btn-primary" target="_blank" download>
-          ⬇️ Download Python 3.11
+          ⬇️ Download Python 3.14
         </a>
       </div>
     </div>
