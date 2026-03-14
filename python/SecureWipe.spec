@@ -1,20 +1,21 @@
 # -*- mode: python ; coding: utf-8 -*-
-# SecureWipe.spec — PyInstaller build config
-# Run: pyinstaller SecureWipe.spec
+# SecureWipe.spec — PyInstaller build configuration
+# The GitHub Actions workflow places adb.exe + DLLs here before running this
 
-import os
+import os, sys
 
 block_cipher = None
 
+# Collect ADB binaries — only include ones that actually exist
+_adb_files = []
+for _f in ['adb.exe', 'AdbWinApi.dll', 'AdbWinUsbApi.dll']:
+    if os.path.exists(_f):
+        _adb_files.append((_f, '.'))
+
 a = Analysis(
     ['secure_wipe_tool.py'],
-    pathex=[],
-    binaries=[
-        # Bundle ADB + DLLs (Windows) — must be in same folder as .spec
-        ('adb.exe',         '.'),
-        ('AdbWinApi.dll',   '.'),
-        ('AdbWinUsbApi.dll','.'),
-    ],
+    pathex=['.'],
+    binaries=_adb_files,
     datas=[],
     hiddenimports=[
         'tkinter',
@@ -29,6 +30,8 @@ a = Analysis(
         'threading',
         'subprocess',
         'webbrowser',
+        'platform',
+        'datetime',
     ],
     hookspath=[],
     hooksconfig={},
@@ -36,8 +39,8 @@ a = Analysis(
     excludes=[
         'matplotlib', 'numpy', 'pandas', 'scipy',
         'PIL', 'PyQt5', 'PyQt6', 'wx',
-        'requests',       # removed — we use stdlib urllib now
-        'pip', 'setuptools',
+        'requests', 'pip', 'setuptools',
+        'test', 'unittest',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -58,14 +61,14 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,          # compress with UPX if available (reduces size ~40%)
+    upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,     # no black console window — GUI only
+    console=False,          # no black terminal window
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='icon.ico',   # optional — remove this line if you don't have an icon
+    # icon intentionally omitted — no .ico file in repo
 )
