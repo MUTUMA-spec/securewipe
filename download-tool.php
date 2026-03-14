@@ -62,7 +62,7 @@ include 'includes/header.php';
       <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
         <div style="font-size:3rem">🐍</div>
         <div style="flex:1">
-          <h3 style="font-family:var(--font-display);font-size:1.2rem;color:var(--text-primary);margin-bottom:4px">Python 3.11 for Windows</h3>
+          <h3 style="font-family:var(--font-display);font-size:1.2rem;color:var(--text-primary);margin-bottom:4px">Python 3.14 for Windows</h3>
           <p style="color:var(--text-muted);font-size:.875rem">Official installer from python.org · ~27 MB</p>
         </div>
         <a href="https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe"
