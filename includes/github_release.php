@@ -6,7 +6,7 @@
  * SETUP: Set GITHUB_REPO below to your "username/repo" after pushing to GitHub.
  */
 
-define('GITHUB_REPO', 'YOUR_GITHUB_USERNAME/YOUR_REPO_NAME'); // ← change this
+define('GITHUB_REPO', 'MUTUMA-spec/securewipe'); // ← change this
 define('RELEASE_CACHE_FILE', __DIR__ . '/../.release_cache.json');
 define('RELEASE_CACHE_TTL',  3600); // seconds
 
