@@ -44,9 +44,9 @@ if ($is_localhost) {
     define('SITE_URL', 'http://securetool.infinityfreeapp.com'); // Your domain
     define('SITE_NAME', 'Secure Data Wiping Education');
     
-    // Error reporting ON for live site
+    // Error reporting off for live site
     error_reporting(E_ALL);
-    ini_set('display_errors', 1);
+    ini_set('display_errors', 0);
 }
 
 // ============================================
