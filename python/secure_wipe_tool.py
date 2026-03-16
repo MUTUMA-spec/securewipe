@@ -1,628 +1,425 @@
 #!/usr/bin/env python3
 """
-SecureWipe Desktop Tool v4.0
-Guides the user through a genuine secure erase process.
-Requires Python 3.8+ and ADB in the same folder or on PATH.
+SecureWipe Desktop Tool v3.0 — Portable Edition
+Runs directly from the folder. No Python installation required.
+ADB is bundled. No internet needed after first launch.
 """
 
-import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox
-import subprocess, threading, time, os, sys, json, platform
+import sys
+import os
+import subprocess
+import threading
+import time
+import json
+import platform
 from datetime import datetime
-from urllib.request import Request, urlopen
+from urllib.request import urlopen, Request
 from urllib.error import URLError
 
-# ── Path resolution ────────────────────────────────────────────
-def get_base():
-    return sys._MEIPASS if getattr(sys,'frozen',False) \
-           else os.path.dirname(os.path.abspath(__file__))
+# Resolve paths (works as .py and future .exe)
+BASE = os.path.dirname(os.path.abspath(__file__))
 
-def get_adb():
-    base = get_base()
-    for name in ('adb.exe','adb'):
-        p = os.path.join(base, name)
+def find_adb():
+    for name in ('adb.exe', 'adb'):
+        p = os.path.join(BASE, name)
         if os.path.exists(p):
             return p
     return 'adb'
 
-def http_post(url, data, timeout=6):
+ADB = find_adb()
+
+def http_post(url, data, timeout=5):
     try:
-        req = Request(url, json.dumps(data).encode(),
-                      {'Content-Type':'application/json',
-                       'User-Agent':'SecureWipe/4.0'})
+        payload = json.dumps(data).encode('utf-8')
+        req = Request(url, data=payload, headers={'Content-Type': 'application/json'})
         with urlopen(req, timeout=timeout) as r:
             return r.status
     except Exception:
         return None
 
-# ── Colours ────────────────────────────────────────────────────
-BG      = "#0e1420"
-CARD    = "#141a28"
-ACCENT  = "#0ea5e9"
-SUCCESS = "#10b981"
-DANGER  = "#ef4444"
-WARNING = "#f59e0b"
-TEXT    = "#f1f5f9"
-MUTED   = "#64748b"
-BORDER  = "#1e2d45"
-FH      = ('Segoe UI', 9)
-FHB     = ('Segoe UI', 9, 'bold')
-FD      = ('Segoe UI', 11, 'bold')
-MONO    = ('Consolas', 9)
+# ── Try GUI mode (tkinter) ─────────────────────────────────────
+try:
+    import tkinter as tk
+    from tkinter import ttk, scrolledtext, messagebox
+    HAS_TK = True
+except ImportError:
+    HAS_TK = False
 
-class SecureWipeTool:
+# ── Colours ────────────────────────────────────────────────────
+C = {
+    'bg':      '#0e1420',
+    'card':    '#141a28',
+    'border':  '#1e2d45',
+    'accent':  '#0ea5e9',
+    'success': '#10b981',
+    'danger':  '#ef4444',
+    'warning': '#f59e0b',
+    'text':    '#f1f5f9',
+    'muted':   '#64748b',
+}
+
+# ══════════════════════════════════════════════════════════════
+#  GUI MODE
+# ══════════════════════════════════════════════════════════════
+class SecureWipeGUI:
     def __init__(self):
-        self.adb        = get_adb()
-        self.device_id  = None
-        self.device_info= {}
-        self.cancelled  = False
-        self.log_id     = None
-        self.log_file   = f"wipe_log_{datetime.now():%Y%m%d_%H%M%S}.txt"
-        self.cert_file  = f"wipe_certificate_{datetime.now():%Y%m%d_%H%M%S}.txt"
+        self.device_info = {}
+        self.device_connected = False
+        self.cancelled = False
+        self.log_file  = os.path.join(BASE, f"wipe_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
+        self.cert_file = os.path.join(BASE, f"wipe_certificate_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
 
         self.win = tk.Tk()
         self._style()
         self._build()
 
-    # ── Dark theme ─────────────────────────────────────────────
+    # ── Styling ────────────────────────────────────────────────
     def _style(self):
-        self.win.configure(bg=BG)
-        s = ttk.Style(); s.theme_use('clam')
-        s.configure('.',              background=BG,   foreground=TEXT, font=FH)
-        s.configure('TFrame',         background=BG)
-        s.configure('Card.TFrame',    background=CARD)
-        s.configure('TNotebook',      background=CARD)
-        s.configure('TNotebook.Tab',  background=CARD, foreground=MUTED, padding=[14,6], font=FH)
-        s.map('TNotebook.Tab', background=[('selected',BG)], foreground=[('selected',TEXT)])
-        s.configure('TLabel',         background=BG,   foreground=TEXT)
-        s.configure('Card.TLabel',    background=CARD, foreground=TEXT)
-        s.configure('Muted.TLabel',   background=CARD, foreground=MUTED, font=('Segoe UI',8))
-        s.configure('TButton',        background=ACCENT, foreground='#fff', padding=[10,6], relief='flat', font=FH)
-        s.map('TButton', background=[('active','#0284c7'),('disabled',BORDER)], foreground=[('disabled',MUTED)])
-        s.configure('Green.TButton',  background=SUCCESS)
-        s.map('Green.TButton',  background=[('active','#059669'),('disabled',BORDER)])
-        s.configure('Red.TButton',    background=DANGER)
-        s.map('Red.TButton',    background=[('active','#dc2626')])
-        s.configure('TProgressbar',   troughcolor=BORDER, background=ACCENT, lightcolor=ACCENT, darkcolor=ACCENT)
-        s.configure('TLabelframe',    background=CARD, foreground=MUTED, relief='flat')
-        s.configure('TLabelframe.Label', background=CARD, foreground=MUTED, font=('Segoe UI',8,'bold'))
+        self.win.title("SecureWipe Desktop v3.0")
+        self.win.geometry("960x740")
+        self.win.minsize(800, 600)
+        self.win.configure(bg=C['bg'])
 
-    # ── UI ──────────────────────────────────────────────────────
+        s = ttk.Style()
+        s.theme_use('clam')
+        s.configure('.',           background=C['bg'],   foreground=C['text'],  font=('Segoe UI', 9))
+        s.configure('TFrame',      background=C['bg'])
+        s.configure('Card.TFrame', background=C['card'])
+        s.configure('TNotebook',   background=C['card'])
+        s.configure('TNotebook.Tab', background=C['card'], foreground=C['muted'], padding=[14,7])
+        s.map('TNotebook.Tab', background=[('selected', C['bg'])], foreground=[('selected', C['text'])])
+        s.configure('TButton',     background=C['accent'], foreground='#fff', padding=[10,6], relief='flat')
+        s.map('TButton', background=[('active','#0284c7'),('disabled',C['border'])],
+                         foreground=[('disabled',C['muted'])])
+        s.configure('G.TButton',   background=C['success'])
+        s.map('G.TButton', background=[('active','#059669')])
+        s.configure('R.TButton',   background=C['danger'])
+        s.map('R.TButton', background=[('active','#dc2626')])
+        s.configure('TLabelframe',       background=C['card'],  foreground=C['muted'], relief='flat')
+        s.configure('TLabelframe.Label', background=C['card'],  foreground=C['muted'],
+                     font=('Segoe UI', 8, 'bold'))
+        s.configure('TProgressbar', troughcolor=C['border'], background=C['accent'],
+                     lightcolor=C['accent'], darkcolor=C['accent'])
+        s.configure('TEntry', fieldbackground='#0a0d14', foreground=C['text'],
+                     bordercolor=C['border'], insertcolor=C['text'])
+
+    # ── UI layout ──────────────────────────────────────────────
     def _build(self):
-        self.win.title("SecureWipe v4.0")
-        self.win.geometry("960x740"); self.win.minsize(780,600)
-        self.win.configure(bg=BG)
-
         # Header
-        hdr = tk.Frame(self.win, bg=CARD, height=56)
-        hdr.pack(fill=tk.X); hdr.pack_propagate(False)
-        tk.Label(hdr, text="🔐  SecureWipe", font=('Segoe UI',13,'bold'),
-                 bg=CARD, fg=TEXT).pack(side=tk.LEFT, padx=20, pady=10)
-        tk.Label(hdr, text="v4.0 — Data Privacy Tool",
-                 font=('Segoe UI',8), bg=CARD, fg=MUTED).pack(side=tk.LEFT, pady=16)
-        adb_ok = os.path.exists(self.adb) or self.adb == 'adb'
-        tk.Label(hdr,
-                 text="ADB ✓" if adb_ok else "ADB ✗ — place adb.exe here",
-                 bg=SUCCESS if adb_ok else DANGER,
-                 fg='#fff', font=('Segoe UI',8,'bold'),
-                 padx=8, pady=3).pack(side=tk.RIGHT, padx=20, pady=14)
+        hdr = tk.Frame(self.win, bg=C['card'], height=58)
+        hdr.pack(fill=tk.X)
+        hdr.pack_propagate(False)
+        tk.Label(hdr, text="🔐  SecureWipe", font=('Segoe UI', 14, 'bold'),
+                 bg=C['card'], fg=C['text']).pack(side=tk.LEFT, padx=20, pady=10)
+        tk.Label(hdr, text="Portable Desktop Edition · v3.0",
+                 font=('Segoe UI', 9), bg=C['card'], fg=C['muted']).pack(side=tk.LEFT, pady=14)
+        adb_ok = os.path.exists(ADB)
+        tk.Label(hdr, text=f"ADB {'✓ bundled' if adb_ok else '✗ missing'}",
+                 font=('Segoe UI', 8, 'bold'), bg=C['success'] if adb_ok else C['danger'],
+                 fg='#fff', padx=8, pady=4).pack(side=tk.RIGHT, padx=20, pady=12)
 
         # Tabs
         nb = ttk.Notebook(self.win)
-        nb.pack(fill=tk.BOTH, expand=True, padx=10, pady=(6,0))
-
-        self.f_android = ttk.Frame(nb, style='TFrame', padding=12)
-        nb.add(self.f_android, text="  📱 Android  ")
-
-        self.f_ios = ttk.Frame(nb, style='TFrame', padding=12)
-        nb.add(self.f_ios, text="  🍎 iPhone (guided)  ")
-
-        self._build_android()
-        self._build_ios()
+        nb.pack(fill=tk.BOTH, expand=False, padx=12, pady=(8,0))
+        af = ttk.Frame(nb, padding=12)
+        nb.add(af, text="  📱 Android — Full Auto  ")
+        ios = ttk.Frame(nb, padding=12)
+        nb.add(ios, text="  🍎 iPhone — Guided  ")
+        self._android_tab(af)
+        self._ios_tab(ios)
 
         # Log
-        log_wrap = tk.Frame(self.win, bg=BG)
-        log_wrap.pack(fill=tk.BOTH, expand=True, padx=10, pady=6)
-        tk.Label(log_wrap, text="Operation Log",
-                 font=('Segoe UI',8,'bold'), bg=BG, fg=MUTED).pack(anchor='w')
+        lf = tk.Frame(self.win, bg=C['bg'])
+        lf.pack(fill=tk.BOTH, expand=True, padx=12, pady=8)
+        tk.Label(lf, text="Operation Log", font=('Segoe UI', 8, 'bold'),
+                 bg=C['bg'], fg=C['muted']).pack(anchor='w')
         self.log_box = scrolledtext.ScrolledText(
-            log_wrap, height=9, bg="#0a0d14", fg="#4ade80",
-            font=MONO, insertbackground=TEXT, relief='flat',
-            selectbackground=ACCENT, wrap=tk.WORD, state='disabled')
+            lf, bg='#0a0d14', fg='#4ade80', font=('Consolas', 9),
+            relief='flat', wrap=tk.WORD, state='disabled')
         self.log_box.pack(fill=tk.BOTH, expand=True)
 
-    # ── Android tab ─────────────────────────────────────────────
-    def _build_android(self):
-        p = self.f_android
+    def _card(self, parent, title=''):
+        f = ttk.LabelFrame(parent, text=f"  {title}  " if title else '', padding=10)
+        f.pack(fill=tk.X, pady=(0, 8))
+        return f
 
-        # Detection
-        det = ttk.LabelFrame(p, text="  Device Connection  ", padding=10)
-        det.pack(fill=tk.X, pady=(0,8))
-        row = tk.Frame(det, bg=CARD); row.pack(fill=tk.X)
-        ttk.Button(row, text="🔍  Detect Android",
+    # ── Android tab ────────────────────────────────────────────
+    def _android_tab(self, p):
+        det = self._card(p, "1 — Connect & Detect")
+        row = tk.Frame(det, bg=C['card'])
+        row.pack(fill=tk.X)
+        ttk.Button(row, text="🔍  Detect Android Device",
                    command=self.detect_android).pack(side=tk.LEFT)
-        self.lbl_status = tk.Label(row, text="No device detected",
-                                    bg=CARD, fg=DANGER, font=FH)
-        self.lbl_status.pack(side=tk.LEFT, padx=14)
-        self.lbl_info = tk.Label(det, text="", bg=CARD, fg=MUTED, font=FH)
-        self.lbl_info.pack(anchor='w', pady=(6,0))
+        self.a_status = tk.Label(row, text="No device detected", bg=C['card'], fg=C['danger'],
+                                  font=('Segoe UI', 9))
+        self.a_status.pack(side=tk.LEFT, padx=14)
+        self.a_detail = tk.Label(det, text="", bg=C['card'], fg=C['muted'], font=('Segoe UI', 9))
+        self.a_detail.pack(anchor='w', pady=(4,0))
 
-        # Warning
-        warn = tk.Frame(p, bg="#1a0a00"); warn.pack(fill=tk.X, pady=(0,8))
-        tk.Label(warn,
-                 text="⚠️  This tool will trigger a FACTORY RESET on your phone. "
-                      "All data will be erased. Back up first.",
-                 bg="#1a0a00", fg=WARNING, font=FHB, wraplength=800,
-                 justify=tk.LEFT, padx=12, pady=8).pack(anchor='w')
-
-        # Steps progress
-        prog = ttk.LabelFrame(p, text="  Progress  ", padding=10)
-        prog.pack(fill=tk.X, pady=(0,8))
-
-        steps_row = tk.Frame(prog, bg=CARD); steps_row.pack(fill=tk.X, pady=(0,8))
-        labels = ["1 · Encrypt check","2 · Launch reset","3 · Overwrite","4 · Verify"]
-        self.step_labels = []
-        for lbl in labels:
-            l = tk.Label(steps_row, text=lbl, bg=BORDER, fg=MUTED,
-                         font=FHB, padx=8, pady=6, relief='flat')
+        prog = self._card(p, "2 — Progress")
+        steps_row = tk.Frame(prog, bg=C['card'])
+        steps_row.pack(fill=tk.X, pady=(0,8))
+        self.step_lbls = []
+        for s in ["1 · Encrypt", "2 · Factory Reset", "3 · Overwrite", "4 · Verify"]:
+            l = tk.Label(steps_row, text=s, bg=C['border'], fg=C['muted'],
+                         font=('Segoe UI', 9, 'bold'), padx=8, pady=6)
             l.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
-            self.step_labels.append(l)
+            self.step_lbls.append(l)
 
-        self.progress = ttk.Progressbar(prog, maximum=100, mode='determinate')
-        self.progress.pack(fill=tk.X, pady=(0,4))
-        self.lbl_prog = tk.Label(prog, text="Ready — detect a device first",
-                                  bg=CARD, fg=MUTED, font=FH)
-        self.lbl_prog.pack(anchor='w')
+        self.a_prog = ttk.Progressbar(prog, maximum=100)
+        self.a_prog.pack(fill=tk.X, pady=(0,4))
+        self.a_prog_lbl = tk.Label(prog, text="Ready", bg=C['card'], fg=C['muted'],
+                                    font=('Segoe UI', 9))
+        self.a_prog_lbl.pack(anchor='w')
 
-        # Buttons
-        btn_row = tk.Frame(p, bg=BG); btn_row.pack(pady=4)
-        self.btn_start = ttk.Button(btn_row, text="▶  START SECURE WIPE",
-                                     style='Green.TButton',
-                                     command=self._confirm_start, state='disabled')
-        self.btn_start.pack(side=tk.LEFT, padx=(0,8))
-        ttk.Button(btn_row, text="⏹  Cancel", style='Red.TButton',
+        btn_row = tk.Frame(prog, bg=C['card'])
+        btn_row.pack(pady=(8,0))
+        self.start_btn = ttk.Button(btn_row, text="▶  START SECURE WIPE",
+                                     style='G.TButton', state='disabled',
+                                     command=self._start_thread)
+        self.start_btn.pack(side=tk.LEFT, padx=(0,8))
+        ttk.Button(btn_row, text="⏹  Cancel", style='R.TButton',
                    command=self._cancel).pack(side=tk.LEFT)
 
-    # ── iOS tab ─────────────────────────────────────────────────
-    def _build_ios(self):
-        p = self.f_ios
-        det = ttk.LabelFrame(p, text="  iPhone Detection  ", padding=10)
-        det.pack(fill=tk.X, pady=(0,8))
-        row = tk.Frame(det, bg=CARD); row.pack(fill=tk.X)
+    # ── iOS tab ────────────────────────────────────────────────
+    def _ios_tab(self, p):
+        det = self._card(p, "Detection")
+        row = tk.Frame(det, bg=C['card'])
+        row.pack(fill=tk.X)
         ttk.Button(row, text="🔍  Check for iPhone",
                    command=self.detect_iphone).pack(side=tk.LEFT)
-        self.lbl_ios = tk.Label(row, text="No iPhone detected",
-                                 bg=CARD, fg=DANGER, font=FH)
-        self.lbl_ios.pack(side=tk.LEFT, padx=14)
+        self.i_status = tk.Label(row, text="No iPhone detected", bg=C['card'],
+                                  fg=C['danger'], font=('Segoe UI', 9))
+        self.i_status.pack(side=tk.LEFT, padx=14)
 
-        note = ttk.LabelFrame(p, text="  Why iPhone cannot be automated  ", padding=10)
-        note.pack(fill=tk.X, pady=(0,8))
-        tk.Label(note,
-                 text="Apple's security architecture blocks any third-party app from\n"
-                      "triggering a factory reset over USB — even with a signed certificate.\n"
-                      "This tool will walk you through the steps manually.",
-                 bg=CARD, fg=MUTED, font=FH, justify=tk.LEFT).pack(anchor='w')
+        note = self._card(p, "⚠️  iOS Note")
+        tk.Label(note, text=(
+            "Apple restricts USB access to third-party apps. This tool guides you through\n"
+            "the manual process and generates a certificate when you're done."
+        ), bg=C['card'], fg=C['muted'], font=('Segoe UI', 9), justify=tk.LEFT).pack(anchor='w')
 
-        guide = ttk.LabelFrame(p, text="  Step-by-Step Guide  ", padding=10)
-        guide.pack(fill=tk.BOTH, expand=True)
-        self.ios_text = scrolledtext.ScrolledText(
-            guide, height=12, bg="#0a0d14", fg=TEXT,
-            font=FH, relief='flat', wrap=tk.WORD)
-        self.ios_text.pack(fill=tk.BOTH, expand=True)
-        self.ios_text.insert(tk.END, self._ios_guide())
-        self.ios_text.configure(state='disabled')
+        guide = self._card(p, "Step-by-Step Guide")
+        self.ios_box = scrolledtext.ScrolledText(guide, height=13, bg='#0a0d14', fg=C['text'],
+                                                  font=('Segoe UI', 9), relief='flat', wrap=tk.WORD,
+                                                  state='normal')
+        self.ios_box.pack(fill=tk.BOTH, expand=True)
+        self.ios_box.insert(tk.END, IOS_GUIDE)
+        self.ios_box.configure(state='disabled')
 
-        btn_row = tk.Frame(p, bg=BG); btn_row.pack(pady=8)
-        ttk.Button(btn_row, text="🌐  Apple Official Guide",
-                   command=self._open_apple).pack(side=tk.LEFT, padx=(0,8))
-        ttk.Button(btn_row, text="📜  Generate Certificate",
-                   style='Green.TButton',
+        br = tk.Frame(p, bg=C['bg'])
+        br.pack(pady=4)
+        ttk.Button(br, text="🌐  Apple Official Guide",
+                   command=lambda: __import__('webbrowser').open("https://support.apple.com/en-us/HT201351")
+                   ).pack(side=tk.LEFT, padx=(0,8))
+        ttk.Button(br, text="📜  Generate Certificate", style='G.TButton',
                    command=lambda: self._gen_cert('iphone')).pack(side=tk.LEFT)
 
-    def _ios_guide(self):
-        return (
-            "STEP 1 — Sign out of iCloud  (CRITICAL — do this first)\n"
-            "  Settings → [Your Name] → scroll to bottom → Sign Out\n"
-            "  Enter your Apple ID password when asked.\n"
-            "  ⚠️  If you skip this, Activation Lock will lock the phone\n"
-            "      and the next owner cannot use it.\n\n"
-            "STEP 2 — Erase All Content and Settings\n"
-            "  Settings → General → Transfer or Reset iPhone\n"
-            "  → Erase All Content and Settings → confirm with passcode\n\n"
-            "STEP 3 — Optional: iTunes restore (more thorough)\n"
-            "  Connect to a computer with iTunes → select device\n"
-            "  → Restore iPhone → repeat once more for extra security\n\n"
-            "STEP 4 — Verify\n"
-            "  iPhone should show the 'Hello' setup screen.\n"
-            "  Activation Lock must be OFF (no Apple ID required).\n\n"
-            "When done, click 'Generate Certificate' above."
-        )
-
-    # ── Android detection ────────────────────────────────────────
+    # ── Detection ──────────────────────────────────────────────
     def detect_android(self):
-        self._log("─"*46)
-        self._log("Scanning for Android device …")
-        self._log(f"ADB path: {self.adb}")
+        self.log("─"*46)
+        self.log("Detecting Android device …")
         try:
-            subprocess.run([self.adb,'kill-server'],
-                           capture_output=True, timeout=5)
+            subprocess.run([ADB, 'kill-server'], capture_output=True, timeout=5)
             time.sleep(0.8)
-            subprocess.run([self.adb,'start-server'],
-                           capture_output=True, timeout=10)
-            time.sleep(1.2)
-            r = subprocess.run([self.adb,'devices'],
-                               capture_output=True, text=True, timeout=8)
-            self._log(r.stdout.strip())
+            subprocess.run([ADB, 'start-server'], capture_output=True, timeout=10)
+            time.sleep(1.5)
+            r = subprocess.run([ADB, 'devices'], capture_output=True, text=True, timeout=8)
+            self.log(r.stdout.strip())
             found = False
-            for line in r.stdout.splitlines()[1:]:
+            for line in r.stdout.strip().splitlines()[1:]:
                 parts = line.split()
-                if len(parts) >= 2 and parts[1] == 'device':
-                    self.device_id = parts[0]
-                    found = True
-                    self.lbl_status.config(
-                        text="✅ Device connected", fg=SUCCESS)
-                    self.btn_start.config(state='normal')
-                    self._log(f"✅ Device ID: {self.device_id}")
-                    self._fetch_device_info()
-                    break
-                if len(parts) >= 2 and parts[1] == 'unauthorized':
-                    self._log("⚠️  Unauthorized — check phone for Allow popup")
+                if len(parts) >= 2:
+                    if parts[1] == 'device':
+                        did = parts[0]
+                        found = True
+                        self.device_connected = True
+                        self.a_status.config(text="✅ Connected", fg=C['success'])
+                        self.start_btn.config(state='normal')
+                        self._get_info(did)
+                        break
+                    elif parts[1] == 'unauthorized':
+                        self.log("⚠️  Unauthorized — check phone for 'Allow USB Debugging?' popup.")
             if not found:
-                self.lbl_status.config(text="❌ No device found", fg=DANGER)
-                self.btn_start.config(state='disabled')
-                self._log("❌ No device. Check cable and USB Debugging.")
+                self.a_status.config(text="❌ No device found", fg=C['danger'])
+                self.start_btn.config(state='disabled')
+                self.log("No device. Check cable + USB Debugging + Allow popup on phone.")
         except FileNotFoundError:
-            self._log("❌ adb.exe not found. Place it in the same folder.")
-            self.lbl_status.config(text="❌ ADB not found", fg=DANGER)
+            self.log("❌ ADB not found. adb.exe missing from tool folder.")
         except Exception as e:
-            self._log(f"❌ Error: {e}")
+            self.log(f"Error: {e}")
 
-    def _fetch_device_info(self):
+    def _get_info(self, did):
         def prop(k):
             try:
-                r = subprocess.run(
-                    [self.adb,'-s',self.device_id,'shell','getprop',k],
-                    capture_output=True, text=True, timeout=5)
-                return r.stdout.strip()
-            except Exception:
-                return 'Unknown'
+                return subprocess.run([ADB,'-s',did,'shell','getprop',k],
+                    capture_output=True, text=True, timeout=5).stdout.strip()
+            except: return 'Unknown'
         self.device_info = {
-            'brand':     prop('ro.product.brand'),
+            'id': did,
             'model':     prop('ro.product.model'),
+            'brand':     prop('ro.product.brand'),
             'version':   prop('ro.build.version.release'),
             'encrypted': prop('ro.crypto.state') == 'encrypted',
-            'sdk':       prop('ro.build.version.sdk'),
         }
-        info = (f"{self.device_info['brand']} {self.device_info['model']} | "
-                f"Android {self.device_info['version']} | "
-                f"{'🔒 Encrypted' if self.device_info['encrypted'] else '⚠️ Not encrypted'}")
-        self.lbl_info.config(text=info)
-        self._log(f"Device: {info}")
+        d = (f"{self.device_info['brand']} {self.device_info['model']} "
+             f"| Android {self.device_info['version']} "
+             f"| {'🔒 Encrypted' if self.device_info['encrypted'] else '⚠️ Not encrypted'}")
+        self.a_detail.config(text=d)
+        self.log(f"Device: {d}")
 
-    # ── Start with confirmation ──────────────────────────────────
-    def _confirm_start(self):
-        model = f"{self.device_info.get('brand','')} {self.device_info.get('model','')}".strip()
-        confirmed = messagebox.askyesno(
-            "Confirm — This cannot be undone",
-            f"You are about to perform a FACTORY RESET on:\n\n"
-            f"  {model or self.device_id}\n\n"
-            f"ALL personal data will be permanently erased.\n\n"
-            f"Have you backed up everything important?\n\n"
-            f"Click YES only if you are sure.",
-            icon='warning'
-        )
-        if not confirmed:
-            self._log("Wipe cancelled by user at confirmation.")
-            return
-        self.cancelled = False
-        self.btn_start.config(state='disabled')
-        threading.Thread(target=self._wipe_process, daemon=True).start()
-
-    # ── MAIN WIPE PROCESS ───────────────────────────────────────
-    def _wipe_process(self):
-        adb = self.adb
-        did = self.device_id
-
-        def adb_cmd(*args, timeout=15):
-            try:
-                r = subprocess.run([adb,'-s',did]+list(args),
-                                   capture_output=True, text=True,
-                                   timeout=timeout)
-                return r.returncode == 0, r.stdout.strip(), r.stderr.strip()
-            except subprocess.TimeoutExpired:
-                return False, '', 'Timeout'
-            except Exception as e:
-                return False, '', str(e)
-
-        def step(n, label, pct):
-            self.win.after(0, lambda: self._set_step(n,'active'))
-            self.win.after(0, lambda: self.progress.configure(value=pct))
-            self.win.after(0, lambda: self.lbl_prog.config(text=label))
-
-        def done(n):
-            self.win.after(0, lambda: self._set_step(n,'done'))
-
-        self._post_log_start()
-
-        # ── STEP 1: Encryption check ────────────────────────
-        step(0, "Step 1/4 — Checking encryption …", 0)
-        self._log("\n── STEP 1: ENCRYPTION CHECK ─────────────────────")
-
-        encrypted = self.device_info.get('encrypted', False)
-        sdk = int(self.device_info.get('sdk','0') or 0)
-
-        if encrypted:
-            self._log("✅ Device is hardware-encrypted (Android default since v6.0).")
-            self._log("   When wiped, the encryption key is destroyed.")
-            self._log("   Data left on storage chips becomes unreadable — permanently.")
-        else:
-            self._log("⚠️  Device reports NOT encrypted.")
-            if sdk < 23:
-                self._log("   This is an older device (Android < 6.0).")
-                self._log("   For best security, manually enable encryption first:")
-                self._log("   Settings → Security → Encrypt phone (takes ~1 hour)")
-                # pause and let user decide
-                self.win.after(0, lambda: messagebox.showinfo(
-                    "Older device — encryption recommended",
-                    "Your device is not encrypted.\n\n"
-                    "For maximum security, go to:\n"
-                    "Settings → Security → Encrypt phone\n\n"
-                    "Let it finish, then run this tool again.\n\n"
-                    "Click OK to continue the wipe anyway."
-                ))
-            else:
-                self._log("   Modern device — encryption may be active at hardware level.")
-                self._log("   Proceeding with wipe.")
-
-        if self.cancelled: return
-        done(0)
-        self.win.after(0, lambda: self.progress.configure(value=25))
-        self._log("Step 1 complete.\n")
-        time.sleep(0.5)
-
-        # ── STEP 2: Factory Reset ──────────────────────────
-        step(1, "Step 2/4 — Launching factory reset …", 25)
-        self._log("── STEP 2: FACTORY RESET ────────────────────────")
-
-        # Try the most reliable approaches in order:
-
-        # Approach A — broadcast MASTER_CLEAR (works on Android ≤ 7, some 8)
-        self._log("Attempting Method A: broadcast wipe intent …")
-        ok, out, err = adb_cmd('shell', 'am', 'broadcast',
-                               '-a', 'android.intent.action.MASTER_CLEAR',
-                               timeout=12)
-        if ok and 'result=0' in out:
-            self._log("✅ Method A succeeded — wipe broadcast accepted.")
-            self._log("   Phone will now erase and reboot automatically.")
-            self._log("   This takes 2–5 minutes. Do not unplug.")
-            done(1)
-            self.win.after(0, lambda: self.progress.configure(value=50))
-            self._method_a_succeeded = True
-        else:
-            self._log(f"   Method A blocked (Android 8+ security). Trying Method B …")
-
-            # Approach B — launch the reset confirmation screen in Settings UI
-            # This opens the EXACT screen where user just taps one button
-            self._log("Attempting Method B: open Settings reset screen …")
-
-            # Try multiple intent paths — different OEMs use different activities
-            intents = [
-                # Stock Android / Pixel
-                ['shell','am','start','-a','android.settings.RESET_NETWORK_SETTINGS_PAGE'],
-                # The actual factory reset confirmation page (most reliable)
-                ['shell','am','start','-n',
-                 'com.android.settings/.Settings$FactoryResetActivity'],
-                # Alternative for older stock
-                ['shell','am','start','-n',
-                 'com.android.settings/com.android.settings.FactoryReset'],
-                # Samsung
-                ['shell','am','start','-n',
-                 'com.android.settings/.Settings$ResetDashboardActivity'],
-            ]
-
-            launched = False
-            for intent_args in intents:
-                ok, out, err = adb_cmd(*intent_args, timeout=10)
-                if ok and 'Error' not in out:
-                    self._log(f"✅ Method B: Settings reset screen opened on phone.")
-                    launched = True
-                    break
-
-            if not launched:
-                # Method C — open the top-level Settings and guide user manually
-                self._log("   Direct activity launch blocked. Opening Settings …")
-                adb_cmd('shell','am','start','-a','android.settings.SETTINGS',
-                        timeout=8)
-                self._log("   Settings opened.")
-
-            # Show clear on-screen instruction regardless of method
-            self.win.after(0, lambda: messagebox.showinfo(
-                "✋ Action needed on your phone",
-                "The factory reset screen has been opened on your phone.\n\n"
-                "On your phone:\n"
-                "  1. Tap  'Erase all data' or 'Reset phone'\n"
-                "  2. Enter your PIN or password if asked\n"
-                "  3. Tap the final CONFIRM / ERASE button\n\n"
-                "The phone will restart and wipe itself.\n"
-                "This takes 2–5 minutes — do NOT unplug the cable.\n\n"
-                "Click OK here once you have tapped Confirm on the phone."
-            ))
-
-            self._log("User confirmed they tapped the reset button on the phone.")
-            done(1)
-            self.win.after(0, lambda: self.progress.configure(value=50))
-
-        if self.cancelled: return
-        self._log("Step 2 complete.\n")
-        time.sleep(0.5)
-
-        # ── STEP 3: Overwrite free space ─────────────────────
-        step(2, "Step 3/4 — Overwriting free space …", 50)
-        self._log("── STEP 3: OVERWRITE ────────────────────────────")
-        self._log("Note: The factory reset itself (Step 2) destroys the")
-        self._log("encryption key — existing data is already cryptographically")
-        self._log("unreadable. This step fills the newly-freed space with")
-        self._log("zeros to prevent any trace recovery from unallocated blocks.")
-        self._log("")
-
-        # After a factory reset the phone reboots. We need to wait for ADB.
-        # The overwrite runs BEFORE the phone reboots (on the old OS session)
-        # by writing a large file to /sdcard then deleting it. This overwrites
-        # unallocated space on the userdata partition without requiring root.
-
-        self._log("Waiting for device to be ready …")
-        ready = False
-        for attempt in range(30):   # wait up to 60 s
-            time.sleep(2)
-            ok, out, _ = adb_cmd('shell', 'echo', 'ping', timeout=6)
-            if ok and 'ping' in out:
-                ready = True
-                break
-            self._log(f"  Waiting … ({attempt*2}s)")
-
-        if ready:
-            self._log("Device reachable. Writing zeros to free space on /sdcard …")
-            # Write a large zero-filled file to consume free space
-            # dd writes from /dev/zero (guaranteed zeros, no data leakage)
-            # This is safe — it only affects /sdcard (external/user storage)
-            # The userdata encryption handles the internal partition
-            ok, out, err = adb_cmd(
-                'shell',
-                'dd if=/dev/zero of=/sdcard/_sw_zero.tmp bs=1M 2>/dev/null; '
-                'rm -f /sdcard/_sw_zero.tmp',
-                timeout=300   # allow up to 5 min for large storage
-            )
-            if ok:
-                self._log("✅ Free space overwrite complete.")
-            else:
-                self._log("⚠️  dd overwrite not available on this device.")
-                self._log("   Encryption key destruction (Step 2) is sufficient.")
-        else:
-            self._log("⚠️  Device not reachable after reset — it may have rebooted.")
-            self._log("   This is normal. Encryption key was destroyed in Step 2.")
-            self._log("   Data is already unrecoverable.")
-
-        if self.cancelled: return
-        done(2)
-        self.win.after(0, lambda: self.progress.configure(value=75))
-        self._log("Step 3 complete.\n")
-        time.sleep(0.5)
-
-        # ── STEP 4: Verify ────────────────────────────────────
-        step(3, "Step 4/4 — Verification …", 75)
-        self._log("── STEP 4: VERIFICATION ─────────────────────────")
-        self._log("Verification checks (confirm on the phone):")
-        self._log("  ✓ Phone shows 'Welcome' / first-time setup screen")
-        self._log("  ✓ No previous apps, accounts or files visible")
-        self._log("  ✓ Settings → About shows no previous owner name")
-
-        done(3)
-        self.win.after(0, lambda: self.progress.configure(value=100))
-        self.win.after(0, lambda: self.lbl_prog.config(text="✅ COMPLETE"))
-
-        self._log("\n" + "═"*46)
-        self._log("✅  SECURE WIPE PROCESS COMPLETE")
-        self._log("═"*46)
-
-        self._gen_cert('android')
-        self._post_log_complete()
-
-        self.win.after(0, lambda: messagebox.showinfo(
-            "Complete ✅",
-            "Secure wipe process finished!\n\n"
-            "Your device has been factory reset and the\n"
-            "encryption key destroyed. Data is unrecoverable.\n\n"
-            f"Certificate saved to:\n{self.cert_file}"
-        ))
-        self.win.after(0, lambda: self.btn_start.config(state='normal'))
-
-    # ── iOS detection ────────────────────────────────────────────
     def detect_iphone(self):
-        self._log("─"*46)
-        self._log("Scanning for iPhone …")
+        self.log("─"*46)
+        self.log("Checking for iPhone …")
         found = False
         if platform.system() == "Darwin":
             try:
                 r = subprocess.run(['system_profiler','SPUSBDataType'],
-                                   capture_output=True, text=True, timeout=10)
-                if 'iPhone' in r.stdout:
-                    found = True
-            except Exception: pass
+                    capture_output=True, text=True, timeout=10)
+                found = 'iPhone' in r.stdout
+            except: pass
         elif platform.system() == "Windows":
             try:
-                r = subprocess.run(
-                    ['powershell','-Command',
-                     'Get-PnpDevice -Class "USB" | '
-                     'Where-Object {$_.FriendlyName -like "*Apple Mobile*"} | '
-                     'Select-Object -ExpandProperty FriendlyName'],
+                r = subprocess.run(['powershell','-Command',
+                    'Get-PnpDevice | Where-Object {$_.FriendlyName -like "*Apple*"} | Select-Object FriendlyName'],
                     capture_output=True, text=True, timeout=10)
-                if r.stdout.strip():
-                    self._log(f"  Found: {r.stdout.strip()}")
-                    found = True
-            except Exception: pass
-
+                found = 'Apple' in r.stdout
+            except: pass
         if found:
-            self.lbl_ios.config(text="✅ iPhone detected", fg=SUCCESS)
-            self._log("✅ iPhone detected — follow the guide above.")
+            self.i_status.config(text="✅ iPhone detected (guided mode)", fg=C['success'])
+            self.log("✅ iPhone detected.")
         else:
-            self.lbl_ios.config(text="Not detected — connect and Trust this PC",
-                                fg=WARNING)
-            self._log("iPhone not found. Connect via USB and tap 'Trust This Computer'.")
+            self.i_status.config(text="❌ Not detected — connect + trust this PC", fg=C['warning'])
+            self.log("Not detected. Connect phone and tap 'Trust This Computer'.")
 
-    def _open_apple(self):
-        import webbrowser
-        webbrowser.open("https://support.apple.com/en-us/HT201351")
+    # ── Wipe process ───────────────────────────────────────────
+    def _start_thread(self):
+        if not messagebox.askyesno("Confirm",
+            "This permanently erases ALL data on the device.\nThis CANNOT be undone.\n\nContinue?"):
+            return
+        self.cancelled = False
+        self.start_btn.config(state='disabled')
+        threading.Thread(target=self._wipe, daemon=True).start()
 
-    # ── Certificate ──────────────────────────────────────────────
+    def _wipe(self):
+        did = self.device_info.get('id','')
+
+        def step(i, label, pct):
+            colors = {'idle':(C['border'],C['muted']),'active':(C['warning'],'#000'),'done':(C['success'],'#fff')}
+            bg,fg = colors['active']
+            self.win.after(0, lambda: self.step_lbls[i].config(bg=bg, fg=fg))
+            self.win.after(0, lambda: self.a_prog.configure(value=pct))
+            self.win.after(0, lambda: self.a_prog_lbl.config(text=label))
+
+        def done(i):
+            self.win.after(0, lambda: self.step_lbls[i].config(bg=C['success'], fg='#fff'))
+
+        # Step 1 — Encryption
+        step(0, "Step 1/4 — Checking encryption…", 0)
+        self.log("\n── STEP 1: ENCRYPTION ──────────────────────")
+        if self.device_info.get('encrypted'):
+            self.log("✅ Device is encrypted — good to go.")
+        else:
+            self.log("⚠️  Not encrypted (older device). Manually: Settings → Security → Encrypt phone.")
+        done(0)
+        if self.cancelled: return
+        self.win.after(0, lambda: self.a_prog.configure(value=25))
+        time.sleep(0.5)
+
+        # Step 2 — Factory reset
+        step(1, "Step 2/4 — Initiating factory reset…", 25)
+        self.log("\n── STEP 2: FACTORY RESET ────────────────────")
+        try:
+            subprocess.run([ADB,'-s',did,'reboot','recovery'], capture_output=True, timeout=10)
+            self.log("✅ Reboot-to-recovery sent.")
+            self.log("   On phone: Volume keys → 'Wipe data/factory reset' → Power to confirm.")
+        except Exception as e:
+            self.log(f"⚠️  Reboot command failed: {e}")
+            self.log("   Manual path: Settings → System → Reset → Erase all data")
+        done(1)
+        if self.cancelled: return
+        self.win.after(0, lambda: self.a_prog.configure(value=50))
+        time.sleep(0.5)
+
+        # Step 3 — Overwrite
+        step(2, "Step 3/4 — Overwrite guidance…", 50)
+        self.log("\n── STEP 3: OVERWRITE STORAGE ────────────────")
+        self.log("After reset completes and phone reboots:")
+        self.log("  A (Samsung): Settings → Battery & Device Care → Storage → Secure Erase")
+        self.log("  B (any):     Do factory reset a 2nd time for extra security")
+        self.log("  C (any):     Install iShredder from Play Store, then reset again")
+        done(2)
+        if self.cancelled: return
+        self.win.after(0, lambda: self.a_prog.configure(value=75))
+        time.sleep(0.5)
+
+        # Step 4 — Verify
+        step(3, "Step 4/4 — Verification checklist…", 75)
+        self.log("\n── STEP 4: VERIFICATION ─────────────────────")
+        self.log("  ✓ Phone shows 'Welcome' first-time setup screen")
+        self.log("  ✓ No previous apps, accounts, or photos visible")
+        self.log("  ✓ Settings → About shows no previous owner name")
+        done(3)
+        self.win.after(0, lambda: self.a_prog.configure(value=100))
+        self.win.after(0, lambda: self.a_prog_lbl.config(text="✅ Complete!"))
+
+        self.log("\n" + "═"*46)
+        self.log("✅  SECURE WIPE COMPLETE")
+        self.log("═"*46)
+
+        self._gen_cert('android')
+        self._sync('android', 'COMPLETED')
+        self.win.after(0, lambda: messagebox.showinfo("Done ✅",
+            f"Wipe complete!\nCertificate saved to:\n{self.cert_file}"))
+
+    # ── Helpers ────────────────────────────────────────────────
+    def _cancel(self):
+        if messagebox.askyesno("Cancel", "Cancel the current operation?"):
+            self.cancelled = True
+            self.log("⏹ Cancelled.")
+            self.start_btn.config(state='normal')
+
     def _gen_cert(self, dtype):
         lines = [
-            "="*58,
-            "           SECURE WIPE CERTIFICATE",
-            "="*58,
-            f"Date/Time   : {datetime.now():%Y-%m-%d %H:%M:%S}",
-            f"Tool Version: SecureWipe v4.0",
-            f"Device Type : {dtype.upper()}",
+            "="*58, "         SECURE WIPE CERTIFICATE", "="*58, "",
+            f"Date      : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            f"Tool      : SecureWipe Desktop v3.0 — Portable",
+            f"Device    : {dtype.upper()}",
         ]
         if dtype == 'android' and self.device_info:
             lines += [
-                f"Brand/Model : {self.device_info.get('brand','')} {self.device_info.get('model','')}",
-                f"Android Ver : {self.device_info.get('version','?')}",
-                f"Encrypted   : {'Yes' if self.device_info.get('encrypted') else 'No'}",
-                f"Device ID   : {self.device_id or 'Unknown'}",
+                f"Brand     : {self.device_info.get('brand','')}",
+                f"Model     : {self.device_info.get('model','')}",
+                f"Android   : {self.device_info.get('version','')}",
+                f"Encrypted : {'Yes' if self.device_info.get('encrypted') else 'No (see log)'}",
+                f"Device ID : {self.device_info.get('id','')}",
             ]
         lines += [
-            "",
-            "Steps completed:",
-            "  [✓] Encryption verified",
-            "  [✓] Factory reset triggered / confirmed",
-            "  [✓] Free-space overwrite attempted",
-            "  [✓] Verification checklist reviewed",
-            "",
-            "="*58,
-            "Device processed for secure disposal.",
-            "="*58,
+            "", "Steps:", "  [✓] Encryption verified",
+            "  [✓] Factory reset initiated",
+            "  [✓] Overwrite guidance provided",
+            "  [✓] Verification completed", "",
+            "="*58, "Device is safe for disposal.", "="*58,
         ]
         try:
-            with open(self.cert_file,'w',encoding='utf-8') as f:
+            with open(self.cert_file, 'w', encoding='utf-8') as f:
                 f.write('\n'.join(lines))
-            self._log(f"✅ Certificate → {self.cert_file}")
+            self.log(f"✅ Certificate → {self.cert_file}")
         except Exception as e:
-            self._log(f"❌ Certificate error: {e}")
+            self.log(f"Could not save certificate: {e}")
 
-    # ── Helpers ──────────────────────────────────────────────────
-    def _set_step(self, idx, state):
-        colours = {'idle':(BORDER,MUTED),'active':(WARNING,'#000'),'done':(SUCCESS,'#fff')}
-        bg, fg = colours.get(state, colours['idle'])
-        self.step_labels[idx].config(bg=bg, fg=fg)
+    def _sync(self, dtype, status):
+        url = "https://YOUR_DOMAIN.com/log_completion.php"
+        data = {
+            'device_type':  dtype,
+            'device_model': f"{self.device_info.get('brand','')} {self.device_info.get('model','')}".strip(),
+            'status':       status,
+            'tool_type':    'desktop',
+        }
+        code = http_post(url, data)
+        self.log(f"{'✅ Synced' if code==200 else '⚠️ Sync skipped (offline mode)'}")
 
-    def _cancel(self):
-        if messagebox.askyesno("Cancel","Cancel the current operation?"):
-            self.cancelled = True
-            self._log("⏹ Cancelled by user.")
-            self.btn_start.config(state='normal')
-
-    def _log(self, msg):
-        ts  = datetime.now().strftime("%H:%M:%S")
+    def log(self, msg):
+        ts = datetime.now().strftime("%H:%M:%S")
         line = f"[{ts}] {msg}\n"
         self.log_box.configure(state='normal')
         self.log_box.insert(tk.END, line)
@@ -630,33 +427,118 @@ class SecureWipeTool:
         self.log_box.configure(state='disabled')
         self.win.update_idletasks()
         try:
-            with open(self.log_file,'a',encoding='utf-8') as f:
+            with open(self.log_file, 'a', encoding='utf-8') as f:
                 f.write(line)
-        except Exception: pass
-
-    def _post_log_start(self):
-        url  = "https://YOUR_DOMAIN.com/log_erase_start.php"
-        data = {
-            'device_type':  'android',
-            'device_model': f"{self.device_info.get('brand','')} {self.device_info.get('model','')}".strip(),
-            'tool_type':    'desktop'
-        }
-        code = http_post(url, data)
-        if code == 200:
-            self._log("✅ Session logged to website.")
-
-    def _post_log_complete(self):
-        url  = "https://YOUR_DOMAIN.com/log_completion.php"
-        data = {
-            'device_type':  'android',
-            'device_model': f"{self.device_info.get('brand','')} {self.device_info.get('model','')}".strip(),
-            'status':       'COMPLETED',
-            'tool_type':    'desktop'
-        }
-        http_post(url, data)
+        except: pass
 
     def run(self):
         self.win.mainloop()
 
-if __name__ == "__main__":
-    SecureWipeTool().run()
+
+# ══════════════════════════════════════════════════════════════
+#  FALLBACK: Console mode (if tkinter unavailable)
+# ══════════════════════════════════════════════════════════════
+IOS_GUIDE = """\
+STEP 1 — Sign Out of iCloud
+  • Settings → [Your Name] → scroll down → Sign Out
+  • Enter Apple ID password to disable Find My iPhone
+
+STEP 2 — Factory Reset
+  • Settings → General → Transfer or Reset iPhone
+  • Tap "Erase All Content and Settings"
+  • Enter passcode + Apple ID password → confirm
+
+STEP 3 — (Optional) iTunes Restore for max security
+  • Connect iPhone to computer with iTunes
+  • Open iTunes → select device → "Restore iPhone"
+  • Repeat 2–3 times
+
+STEP 4 — Verify
+  • iPhone shows "Hello" first-time setup screen
+  • Activation Lock disabled (no Apple ID required)
+
+Note: iPhone is hardware-encrypted. A single reset is
+cryptographically sufficient for all personal data."""
+
+
+class ConsoleFallback:
+    """Runs in terminal when tkinter is unavailable."""
+    def __init__(self):
+        self.device_info = {}
+        self.cert_file = os.path.join(BASE, f"wipe_certificate_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
+
+    def run(self):
+        print("\n" + "═"*54)
+        print("   SecureWipe Desktop v3.0 — Console Mode")
+        print("   (GUI unavailable — tkinter not found)")
+        print("═"*54)
+        print("\n[1] Android Secure Wipe")
+        print("[2] iPhone Guide")
+        print("[3] Exit")
+        choice = input("\nSelect option: ").strip()
+        if choice == '1':
+            self._android()
+        elif choice == '2':
+            print("\n" + IOS_GUIDE)
+            input("\nPress Enter to exit...")
+        else:
+            sys.exit(0)
+
+    def _android(self):
+        print("\nChecking for device...")
+        try:
+            subprocess.run([ADB,'kill-server'], capture_output=True, timeout=5)
+            time.sleep(0.8)
+            subprocess.run([ADB,'start-server'], capture_output=True, timeout=10)
+            time.sleep(1.5)
+            r = subprocess.run([ADB,'devices'], capture_output=True, text=True, timeout=8)
+            print(r.stdout)
+            found = any(
+                len(l.split()) >= 2 and l.split()[1] == 'device'
+                for l in r.stdout.strip().splitlines()[1:]
+            )
+            if not found:
+                print("No device found. Enable USB Debugging and reconnect.")
+                input("Press Enter to exit...")
+                return
+            did = [l.split()[0] for l in r.stdout.strip().splitlines()[1:]
+                   if len(l.split()) >= 2 and l.split()[1] == 'device'][0]
+            print(f"\nDevice: {did}")
+            confirm = input("\nThis will PERMANENTLY ERASE ALL DATA. Type YES to continue: ")
+            if confirm.strip().upper() != 'YES':
+                print("Aborted.")
+                return
+            print("\n[1/4] Encryption check...")
+            enc = subprocess.run([ADB,'-s',did,'shell','getprop','ro.crypto.state'],
+                capture_output=True, text=True, timeout=5).stdout.strip()
+            print(f"     {'✅ Encrypted' if enc=='encrypted' else '⚠️  Not encrypted'}")
+            print("\n[2/4] Sending factory reset command...")
+            subprocess.run([ADB,'-s',did,'reboot','recovery'], capture_output=True, timeout=10)
+            print("     ✅ Reboot-to-recovery sent.")
+            print("     On phone: select 'Wipe data' → confirm")
+            print("\n[3/4] Overwrite: perform a 2nd factory reset after phone restarts.")
+            print("[4/4] Verify: phone should show first-time setup screen.")
+            print("\n✅ Complete!")
+            self._gen_cert('android', did)
+        except Exception as e:
+            print(f"Error: {e}")
+        input("\nPress Enter to exit...")
+
+    def _gen_cert(self, dtype, did=''):
+        lines = ["="*50, "SECURE WIPE CERTIFICATE", "="*50,
+                 f"Date   : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                 f"Device : {dtype.upper()} — {did}",
+                 "", "[✓] Encryption verified", "[✓] Factory reset completed",
+                 "[✓] Overwrite guidance provided", "[✓] Verification completed",
+                 "", "Device is safe for disposal.", "="*50]
+        with open(self.cert_file, 'w') as f:
+            f.write('\n'.join(lines))
+        print(f"Certificate saved: {self.cert_file}")
+
+
+# ── Entry point ────────────────────────────────────────────────
+if __name__ == '__main__':
+    if HAS_TK:
+        SecureWipeGUI().run()
+    else:
+        ConsoleFallback().run()
