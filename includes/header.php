@@ -35,7 +35,7 @@ $base = $is_admin_dir ? '../' : '';
       <ul class="nav-links">
         <li><a href="<?= $base ?>index.php" <?= $current_page=='index.php' ? 'class="active"' : '' ?>>Home</a></li>
         <li><a href="<?= $base ?>guides.php" <?= $current_page=='guides.php' ? 'class="active"' : '' ?>>Guides</a></li>
-        <li><a href="<?= $base ?>secure-erase.php" <?= $current_page=='secure-erase.php' ? 'class="active"' : '' ?>>Erase Tool</a></li>
+        <li><a href="<?= $base ?>secure-erase.php" <?= $current_page=='secure-erase.php' ? 'class="active"' : '' ?>>Erase web Tool</a></li>
         <li><a href="<?= $base ?>survey.php" <?= $current_page=='survey.php' ? 'class="active"' : '' ?>>Survey</a></li>
         <li><a href="<?= $base ?>feedback.php" <?= $current_page=='feedback.php' ? 'class="active"' : '' ?>>Feedback</a></li>
         <li><a href="<?= $base ?>downloads.php" <?= $current_page=='downloads.php' ? 'class="active"' : '' ?>>Downloads</a></li>
@@ -78,7 +78,7 @@ $base = $is_admin_dir ? '../' : '';
 <nav class="mobile-nav" id="mobileNav">
   <a href="<?= $base ?>index.php">Home</a>
   <a href="<?= $base ?>guides.php">Guides</a>
-  <a href="<?= $base ?>secure-erase.php">Erase Tool</a>
+  <a href="<?= $base ?>secure-erase.php">Erase web Tool</a>
   <a href="<?= $base ?>survey.php">Survey</a>
   <a href="<?= $base ?>feedback.php">Feedback</a>
   <a href="<?= $base ?>downloads.php">Downloads</a>
