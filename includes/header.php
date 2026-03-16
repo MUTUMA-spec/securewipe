@@ -38,6 +38,7 @@ $base = $is_admin_dir ? '../' : '';
         <li><a href="<?= $base ?>secure-erase.php" <?= $current_page=='secure-erase.php' ? 'class="active"' : '' ?>>Erase Tool</a></li>
         <li><a href="<?= $base ?>survey.php" <?= $current_page=='survey.php' ? 'class="active"' : '' ?>>Survey</a></li>
         <li><a href="<?= $base ?>feedback.php" <?= $current_page=='feedback.php' ? 'class="active"' : '' ?>>Feedback</a></li>
+        <li><a href="<?= $base ?>downloads.php" <?= $current_page=='downloads.php' ? 'class="active"' : '' ?>>Downloads</a></li>
       </ul>
     </nav>
 
@@ -80,7 +81,7 @@ $base = $is_admin_dir ? '../' : '';
   <a href="<?= $base ?>secure-erase.php">Erase Tool</a>
   <a href="<?= $base ?>survey.php">Survey</a>
   <a href="<?= $base ?>feedback.php">Feedback</a>
-  <a href="<?= $base ?>download-tool.php">Download</a>
+  <a href="<?= $base ?>downloads.php">Downloads</a>
 </nav>
 
 <main>

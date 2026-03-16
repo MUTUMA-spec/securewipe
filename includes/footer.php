@@ -11,7 +11,7 @@
       <a href="index.php">Home</a>
       <a href="guides.php">Guides</a>
       <a href="secure-erase.php">Erase Tool</a>
-      <a href="download-tool.php">Download</a>
+      <a href="downloads.php">Downloads</a>
       <a href="survey.php">Survey</a>
       <a href="feedback.php">Feedback</a>
     </nav>
