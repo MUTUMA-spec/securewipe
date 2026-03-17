@@ -70,23 +70,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       border-radius: 50%; pointer-events: none;
     }
 
-    /* Security pattern background */
-    .login-page::before {
-      background-image: 
-        linear-gradient(45deg, rgba(14, 165, 233, .03) 1px, transparent 1px),
-        linear-gradient(-45deg, rgba(14, 165, 233, .03) 1px, transparent 1px);
-      background-size: 60px 60px;
-      background-position: 0 0, 30px 30px;
-    }
-
-    /* Floating security icons background elements */
-    .login-page::before {
-      background: 
-        radial-gradient(circle at 15% 25%, var(--accent-glow) 0%, transparent 15%),
-        radial-gradient(circle at 85% 75%, rgba(16,185,129,.15) 0%, transparent 20%),
-        radial-gradient(circle at 50% -30%, rgba(14,165,233,.08) 0%, transparent 25%);
-    }
-
     /* ── Card ──────────────────────────────────────── */
     .login-card {
       width: 100%;
@@ -278,7 +261,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
     <span class="login-logo-name">SecureWipe</span>
     <span class="login-logo-badge">Admin Portal</span>
-   
   </div>
 
   <div class="login-divider"></div>
