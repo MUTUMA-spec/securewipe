@@ -5,16 +5,17 @@ $total_downloads = 0;
 $result = mysqli_query($conn, "SELECT COUNT(*) as count FROM erase_logs WHERE tool_type='desktop'");
 if ($result) { $row = mysqli_fetch_assoc($result); $total_downloads = $row['count']; }
 
-$exe_path    = __DIR__ . '/python/dist/SecureWipe.exe';
-$exe_exists  = file_exists($exe_path);
-$exe_size    = $exe_exists ? round(filesize($exe_path) / 1048576, 1) . ' MB' : '';
+// ── GitHub Release URL ─────────────────────────────────────────
+// Update this URL each time you make a new GitHub Release
+$exe_download_url = "https://github.com/MUTUMA-spec/securewipe/releases/download/v1.0/SecureWipe.exe";
+$github_releases = "https://github.com/MUTUMA-spec/securewipe/releases";
 
 include 'includes/header.php';
 ?>
 
 <div class="dl-page">
 
-  <!-- Header -->
+  <!-- Page header -->
   <div class="dl-page-header">
     <h1>Desktop Wipe Tools</h1>
     <p>Two options depending on how much you want to spend. Both achieve the same result.</p>
@@ -64,10 +65,9 @@ include 'includes/header.php';
           <ul>
             <li>Detects your phone brand automatically via USB</li>
             <li>Opens the factory reset screen directly on the phone</li>
-            <li>Provides brand-specific step-by-step instructions</li>
-            <li>Overwrites free storage with zeros after the reset</li>
+            <li>Gives brand-specific step-by-step instructions</li>
+            <li>Overwrites free storage with zeros after reset</li>
             <li>Generates a wipe certificate when complete</li>
-            <li>Logs the session to this website's admin dashboard</li>
           </ul>
         </div>
         <div class="dl-honest-doesnt">
@@ -75,15 +75,14 @@ include 'includes/header.php';
           <ul>
             <li>Enable USB Debugging on the phone once</li>
             <li>Tap <strong>Allow</strong> on the phone's USB popup</li>
-            <li>Tap the final <strong>Erase everything</strong> button on the phone</li>
+            <li>Tap the final <strong>Erase everything</strong> on the phone</li>
             <li>Windows 10 or 11 PC required</li>
           </ul>
         </div>
       </div>
     </div>
 
-    <!-- EXE download card -->
-    <?php if ($exe_exists): ?>
+    <!-- Main download card — links to GitHub Releases -->
     <div class="dl-exe-card">
       <div class="dl-exe-left">
         <div class="dl-exe-icon">
@@ -96,46 +95,40 @@ include 'includes/header.php';
           <div class="dl-exe-name">SecureWipe.exe</div>
           <div class="dl-exe-meta">
             Windows 10/11 &nbsp;·&nbsp; 64-bit &nbsp;·&nbsp;
-            <?= $exe_size ?> &nbsp;·&nbsp; No installation required
+            ~15 MB &nbsp;·&nbsp; No installation required
           </div>
         </div>
       </div>
-      <a href="python/dist/SecureWipe.exe" class="dl-btn dl-btn-green" download>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-             stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        Download SecureWipe.exe
-      </a>
-    </div>
-
-    <div class="dl-smartscreen-note">
-      💡 <strong>Windows SmartScreen warning?</strong>
-      Click <strong>More info → Run anyway</strong>. This appears on any downloaded EXE
-      that is not commercially code-signed. The full source code is available
-      as the <a href="python/secure_wipe_tool.py" download>Python script</a>.
-    </div>
-    <?php else: ?>
-    <div class="dl-exe-card" style="border-color:rgba(245,158,11,.3)">
-      <div class="dl-exe-left">
-        <div class="dl-exe-icon" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        </div>
-        <div>
-          <div class="dl-exe-name">SecureWipe.exe — Coming Soon</div>
-          <div class="dl-exe-meta">Use the Python script version below in the meantime.</div>
-        </div>
+      <div class="dl-exe-buttons">
+        <a href="<?= $github_exe_url ?>" class="dl-btn dl-btn-green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download SecureWipe.exe
+        </a>
+        <a href="<?= $github_releases ?>" class="dl-btn-releases" target="_blank">
+          All releases ↗
+        </a>
       </div>
     </div>
-    <?php endif; ?>
 
-    <!-- Advanced / Python fallback (collapsed) -->
+    <!-- SmartScreen note -->
+    <div class="dl-smartscreen-note">
+      <strong>💡 Windows SmartScreen warning?</strong>
+      This is normal for any downloaded EXE that is not commercially code-signed.
+      When the warning appears: click <strong>More info</strong> then <strong>Run anyway</strong>.
+      The full source code is available on
+      <a href="<?= $github_releases ?>" target="_blank">GitHub</a>.
+    </div>
+
+    <!-- Advanced / Python fallback collapsed -->
     <details class="dl-advanced">
-      <summary>Advanced users — Python script version (requires Python + ADB setup)</summary>
+      <summary>Advanced users — run the Python script directly</summary>
       <div class="dl-advanced-body">
-        <p>If you already have Python 3.11 and ADB installed, you can run the script directly.</p>
+        <p>If you already have Python 3.11 and ADB set up, you can run the script without the EXE.</p>
         <div class="dl-free-grid">
           <div class="dl-card">
             <div class="dl-card-top">
@@ -147,7 +140,7 @@ include 'includes/header.php';
                 <div class="dl-card-meta">Python script · ~50 KB</div>
               </div>
             </div>
-            <p class="dl-card-desc">The tool source. Requires Python 3.11 and ADB already set up.</p>
+            <p class="dl-card-desc">The tool source. Requires Python 3.11 and ADB already installed.</p>
             <a href="python/secure_wipe_tool.py" class="dl-btn dl-btn-green" download>Download .py</a>
           </div>
           <div class="dl-card">
@@ -160,7 +153,7 @@ include 'includes/header.php';
                 <div class="dl-card-meta">~27 MB · Windows 64-bit</div>
               </div>
             </div>
-            <p class="dl-card-desc">Runtime. Tick <strong>"Add to PATH"</strong> during install.</p>
+            <p class="dl-card-desc">Tick <strong>"Add to PATH"</strong> during install.</p>
             <a href="https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe"
                class="dl-btn dl-btn-blue" target="_blank">Download Python</a>
           </div>
@@ -174,14 +167,12 @@ include 'includes/header.php';
                 <div class="dl-card-meta">~8 MB ZIP · Windows</div>
               </div>
             </div>
-            <p class="dl-card-desc">Android Debug Bridge. Extract and copy adb.exe to the tool folder.</p>
+            <p class="dl-card-desc">Extract and copy adb.exe to the tool folder.</p>
             <a href="https://dl.google.com/android/repository/platform-tools-latest-windows.zip"
                class="dl-btn dl-btn-amber" download>Download ADB</a>
           </div>
         </div>
-        <div class="dl-setup-link">
-          <a href="download-tool.php">Full setup guide →</a>
-        </div>
+        <div class="dl-setup-link"><a href="download-tool.php">Full setup guide →</a></div>
       </div>
     </details>
 
@@ -207,7 +198,6 @@ include 'includes/header.php';
       Premium Option — Dr.Fone Data Eraser (Third-Party, Paid)
     </div>
 
-    <!-- Payment warning — shown BEFORE anything else -->
     <div class="dl-paid-warning">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
            stroke-linecap="round" stroke-linejoin="round"
@@ -219,7 +209,7 @@ include 'includes/header.php';
       <div>
         <strong>This is a paid third-party product.</strong>
         Dr.Fone is made by Wondershare — not by SecureWipe.
-        A purchase or subscription is required before you can use the erase feature.
+        A purchase is required before you can use the erase feature.
         We do not earn anything if you click this link.
       </div>
     </div>
@@ -238,10 +228,9 @@ include 'includes/header.php';
           <div class="dl-paid-feature">✅ Plug in phone, click Erase — fully guided from PC</div>
           <div class="dl-paid-feature">✅ Works on Android and iPhone</div>
           <div class="dl-paid-feature">✅ Multiple overwrite passes</div>
-          <div class="dl-paid-feature">✅ No Python, ADB, or any manual setup</div>
-          <div class="dl-paid-feature">✅ Generates a wipe report</div>
-          <div class="dl-paid-feature paid-con">💳 Purchase required to use the erase feature</div>
-          <div class="dl-paid-feature paid-con">🌐 Third-party software — not made by this project</div>
+          <div class="dl-paid-feature">✅ No Python, ADB, or manual setup needed</div>
+          <div class="dl-paid-feature paid-con">💳 Purchase required to use erase feature</div>
+          <div class="dl-paid-feature paid-con">🌐 Third-party — not made by this project</div>
         </div>
       </div>
       <div class="dl-paid-right">
@@ -279,7 +268,7 @@ include 'includes/header.php';
     </div>
   </div>
 
-</div><!-- .dl-page -->
+</div>
 
 <style>
 .dl-page{max-width:960px;margin:0 auto;padding:48px 24px}
@@ -312,11 +301,14 @@ include 'includes/header.php';
 .dl-honest-doesnt li::before{content:'→';position:absolute;left:0;color:var(--text-muted)}
 .dl-honest-doesnt li strong{color:var(--text-primary)}
 .dl-exe-card{display:flex;align-items:center;justify-content:space-between;gap:20px;background:var(--bg-elevated);border:1px solid rgba(16,185,129,.3);border-radius:16px;padding:22px 24px;margin-bottom:14px;flex-wrap:wrap}
-.dl-exe-left{display:flex;align-items:center;gap:16px}
+.dl-exe-left{display:flex;align-items:center;gap:16px;flex:1}
 .dl-exe-icon{width:48px;height:48px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .dl-exe-icon svg{width:24px;height:24px}
 .dl-exe-name{font-family:var(--font-display);font-size:1.1rem;font-weight:700;color:var(--text-primary);margin-bottom:4px}
 .dl-exe-meta{font-size:.78rem;color:var(--text-muted)}
+.dl-exe-buttons{display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0}
+.dl-btn-releases{font-size:.78rem;color:var(--text-muted);text-decoration:none;transition:color .2s}
+.dl-btn-releases:hover{color:var(--accent)}
 .dl-smartscreen-note{background:rgba(14,165,233,.06);border:1px solid rgba(14,165,233,.2);border-radius:12px;padding:12px 16px;font-size:.82rem;color:var(--text-secondary);margin-bottom:18px}
 .dl-smartscreen-note strong{color:var(--text-primary)}
 .dl-smartscreen-note a{color:var(--accent);text-decoration:none}
@@ -374,6 +366,7 @@ include 'includes/header.php';
   .dl-honest-grid{grid-template-columns:1fr}
   .dl-paid-card{grid-template-columns:1fr}
   .dl-exe-card{flex-direction:column;align-items:flex-start}
+  .dl-exe-buttons{width:100%}
 }
 </style>
 
