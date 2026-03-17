@@ -7,7 +7,7 @@ if ($result) { $row = mysqli_fetch_assoc($result); $total_downloads = $row['coun
 
 // ── GitHub Release URL ─────────────────────────────────────────
 // Update this URL each time you make a new GitHub Release
-$exe_download_url = "https://github.com/MUTUMA-spec/securewipe/releases/download/v1.0/SecureWipe.exe";
+$github_exe_url  = "https://github.com/MUTUMA-spec/securewipe/releases/download/v1.0/SecureWipe.exe";
 $github_releases = "https://github.com/MUTUMA-spec/securewipe/releases";
 
 include 'includes/header.php';
