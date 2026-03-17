@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     /* Security pattern background */
-    .login-page {
+    .login-page::before {
       background-image: 
         linear-gradient(45deg, rgba(14, 165, 233, .03) 1px, transparent 1px),
         linear-gradient(-45deg, rgba(14, 165, 233, .03) 1px, transparent 1px);
