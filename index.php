@@ -21,7 +21,7 @@ if ($result) {
 }
 ?>
 
-<section class="hero-banking">
+<section class="hero-banking" style="--hero-bg-image: url('https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1600&q=80');">
     <div class="hero-container">
         <div class="hero-content">
             <div class="trust-badge">
@@ -91,6 +91,15 @@ if ($result) {
 </section>
 
 <section id="learn-more" class="problem-section">
+    <div class="section-with-image" style="max-width:1100px;margin:0 auto 40px;padding:0 24px;">
+        <div class="section-image-wrap">
+            <img src="https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=800&q=80" alt="Data security concept" loading="lazy">
+        </div>
+        <div>
+            <h2 style="margin-bottom:12px;">The Hard Truth About Factory Resets</h2>
+            <p style="color:var(--text-secondary,#94a3b8);line-height:1.7;">What you don't know could cost you your privacy. Forensic recovery tools can extract photos, messages, banking credentials and personal documents from a "factory reset" phone in minutes — even years later.</p>
+        </div>
+    </div>
     <div class="section-header">
         <h2>The Hard Truth About Factory Resets</h2>
         <p class="section-subtitle">What you don't know could cost you your privacy</p>
@@ -176,6 +185,17 @@ if ($result) {
 </section>
 
 <section class="tools-showcase">
+    <div style="max-width:1100px;margin:0 auto 0;padding:0 24px 40px;">
+        <div class="section-with-image reversed">
+            <div class="section-image-wrap">
+                <img src="https://images.unsplash.com/photo-1581092335397-9583eb92d232?w=800&q=80" alt="Laptop connected to phone" loading="lazy">
+            </div>
+            <div>
+                <h2 style="margin-bottom:12px;">Two Tools, One Goal</h2>
+                <p style="color:var(--text-secondary,#94a3b8);line-height:1.7;">Whether you prefer a guided web process or a powerful desktop app connected via USB, SecureWipe has you covered. Both paths result in a device that's safe to sell, donate, or recycle.</p>
+            </div>
+        </div>
+    </div>
     <div class="section-header">
         <h2>Choose Your Tool</h2>
         <p class="section-subtitle">Web-based guide or desktop application - you decide</p>

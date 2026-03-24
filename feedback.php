@@ -34,6 +34,11 @@ if ($result) {
 include 'includes/header.php';
 ?>
 
+
+<div class="page-hero-banner">
+    <h1>💬 Share Your Experience</h1>
+    <p>Your feedback helps us improve SecureWipe for everyone</p>
+</div>
 <div class="feedback-container">
   <h1>💬 Feedback & Suggestions</h1>
   <p>We'd love to hear your thoughts about our website and tools.</p>

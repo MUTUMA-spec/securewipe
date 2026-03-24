@@ -314,10 +314,36 @@ class SecureEraseController {
         if (completionDiv) {
             completionDiv.style.display = 'block';
             completionDiv.innerHTML = `
-                <div class="alert alert-success">
-                    <h3>✅ Your phone has been securely wiped!</h3>
-                    <p>Safe to sell, donate, or dispose of your device.</p>
-                    <p><strong>Reference ID:</strong> ${this.logId}</p>
+                <div class="completion-success-card">
+                    <div class="completion-icon">✅</div>
+                    <h3>🎉 Your Phone Should Now Be Clean!</h3>
+                    <p class="completion-subtitle">
+                        You have completed all 4 steps of the secure erase guide.<br>
+                        Your personal data should no longer be accessible on this device — it is now safe to sell, donate, or recycle.
+                    </p>
+                    <div class="completion-details">
+                        <div class="completion-detail-item">
+                            <span class="detail-icon">🔐</span>
+                            <span>Storage encryption confirmed</span>
+                        </div>
+                        <div class="completion-detail-item">
+                            <span class="detail-icon">🔄</span>
+                            <span>Factory reset completed</span>
+                        </div>
+                        <div class="completion-detail-item">
+                            <span class="detail-icon">✍️</span>
+                            <span>Free space overwritten</span>
+                        </div>
+                        <div class="completion-detail-item">
+                            <span class="detail-icon">🔍</span>
+                            <span>Device verified — no data remains</span>
+                        </div>
+                    </div>
+                    <p class="completion-note">
+                        💡 <strong>Tip:</strong> For a fully automated wipe with an official certificate, try our
+                        <a href="download-tool.php" style="color:#10b981;text-decoration:underline;">Desktop Tool</a> next time.
+                    </p>
+                    <p class="completion-ref">📋 <strong>Reference ID:</strong> ${this.logId || 'N/A'}</p>
                 </div>
             `;
         }

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-SecureWipe Desktop Tool v5.0
+SecureWipe Desktop Tool v5.1
 Covers ALL Android brands including Infinix / Tecno / Itel (Android 14).
-No recovery mode. No power menu. Just the Settings reset screen.
+Now with: simulated wipe mode, auto-restart after completion, DB start logging.
 """
 
 import tkinter as tk
@@ -18,31 +18,55 @@ def get_base():
 
 def get_adb():
     base = get_base()
-    # Check all possible locations — handles both build methods:
-    # --add-data "adb_binaries;adb_binaries"  →  _MEIPASS/adb_binaries/adb.exe
-    # --add-binary "adb.exe;."                →  _MEIPASS/adb.exe
-    # Running as plain .py                    →  same folder as script
     script_dir = os.path.dirname(os.path.abspath(__file__)) if not getattr(sys, 'frozen', False) else base
     candidates = [
-        os.path.join(base,       'adb_binaries', 'adb.exe'),  # your build (subfolder)
-        os.path.join(base,       'adb.exe'),                   # flat bundle
-        os.path.join(script_dir, 'adb_binaries', 'adb.exe'),  # .py + subfolder
-        os.path.join(script_dir, 'adb.exe'),                   # .py + same folder
+        os.path.join(base,       'adb_binaries', 'adb.exe'),
+        os.path.join(base,       'adb.exe'),
+        os.path.join(script_dir, 'adb_binaries', 'adb.exe'),
+        os.path.join(script_dir, 'adb.exe'),
     ]
     for c in candidates:
         if os.path.exists(c):
             return c
-    return 'adb'  # last resort: system PATH
+    return 'adb'
+
+# ── HTTP helpers ────────────────────────────────────────────────
+BASE_URL = "http://securetool.infinityfreeapp.com"   # change to your domain
 
 def http_post(url, data, timeout=6):
     try:
         req = Request(url, json.dumps(data).encode(),
                       {'Content-Type': 'application/json',
-                       'User-Agent': 'SecureWipe/5.0'})
+                       'User-Agent':   'SecureWipe/5.1'})
         with urlopen(req, timeout=timeout) as r:
-            return r.status
+            return r.read().decode()
     except Exception:
         return None
+
+def post_start(device_type, device_model):
+    """Log session start to DB; returns log_id or None."""
+    resp = http_post(f"{BASE_URL}/log_erase_start.php", {
+        'device_type':  device_type,
+        'device_model': device_model,
+        'tool_type':    'desktop'
+    })
+    if resp:
+        try:
+            data = json.loads(resp)
+            return data.get('log_id')
+        except Exception:
+            pass
+    return None
+
+def post_complete(device_type, device_model, log_id=None):
+    """Log session completion to DB."""
+    http_post(f"{BASE_URL}/log_completion.php", {
+        'device_type':  device_type,
+        'device_model': device_model,
+        'status':       'COMPLETED',
+        'tool_type':    'desktop',
+        'log_id':       log_id
+    })
 
 # ── Colours ────────────────────────────────────────────────────
 BG = "#0e1420"; CARD = "#141a28"; ACCENT = "#0ea5e9"
@@ -51,19 +75,12 @@ TEXT = "#f1f5f9"; MUTED = "#64748b"; BORDER = "#1e2d45"
 FH = ('Segoe UI', 9); FHB = ('Segoe UI', 9, 'bold'); MONO = ('Consolas', 9)
 
 # ══════════════════════════════════════════════════════════════
-# BRAND RESET DATABASE
-# Every known manufacturer's Settings package + activity for factory reset
+# BRAND DATABASE
 # ══════════════════════════════════════════════════════════════
 BRAND_RESET = {
-
-    # ── Transsion group (Infinix, Tecno, Itel) ─────────────────
-    # Android 14 HiOS / XOS / iTel OS
     'infinix': [
-        # XOS 14 direct reset activity
         'com.android.settings/.Settings$FactoryResetActivity',
         'com.android.settings/.FactoryResetActivity',
-        'com.android.settings/.ResetActivity',
-        # XOS uses this path in newer builds
         'com.transsion.settings/.Settings$FactoryResetActivity',
         'com.transsion.settings/.FactoryResetActivity',
     ],
@@ -71,22 +88,17 @@ BRAND_RESET = {
         'com.android.settings/.Settings$FactoryResetActivity',
         'com.android.settings/.FactoryResetActivity',
         'com.transsion.settings/.Settings$FactoryResetActivity',
-        'com.transsion.settings/.FactoryResetActivity',
     ],
     'itel': [
         'com.android.settings/.Settings$FactoryResetActivity',
         'com.android.settings/.FactoryResetActivity',
         'com.transsion.settings/.Settings$FactoryResetActivity',
     ],
-
-    # ── Samsung ────────────────────────────────────────────────
     'samsung': [
         'com.android.settings/.Settings$FactoryResetActivity',
         'com.android.settings/.Settings$ResetDashboardActivity',
         'com.samsung.android.settings/.Settings$FactoryResetActivity',
     ],
-
-    # ── Xiaomi / Redmi / POCO ──────────────────────────────────
     'xiaomi': [
         'com.android.settings/.Settings$FactoryResetActivity',
         'com.android.settings/.FactoryResetActivity',
@@ -95,38 +107,26 @@ BRAND_RESET = {
     'redmi':  ['com.android.settings/.Settings$FactoryResetActivity',
                'com.android.settings/.FactoryResetActivity'],
     'poco':   ['com.android.settings/.Settings$FactoryResetActivity'],
-
-    # ── Huawei / Honor ─────────────────────────────────────────
     'huawei': [
         'com.android.settings/.Settings$FactoryResetActivity',
         'com.huawei.systemmanager/.appcontrol.activity.StartupNormalAppActivity',
         'com.android.settings/.FactoryResetActivity',
     ],
-    'honor': [
-        'com.android.settings/.Settings$FactoryResetActivity',
-        'com.android.settings/.FactoryResetActivity',
-    ],
-
-    # ── OPPO / Realme / OnePlus / Vivo ─────────────────────────
-    'oppo':    ['com.android.settings/.Settings$FactoryResetActivity',
-                'com.coloros.settings/.Settings$FactoryResetActivity'],
-    'realme':  ['com.android.settings/.Settings$FactoryResetActivity',
-                'com.android.settings/.FactoryResetActivity'],
-    'oneplus': ['com.android.settings/.Settings$FactoryResetActivity',
-                'com.android.settings/.FactoryResetActivity'],
-    'vivo':    ['com.android.settings/.Settings$FactoryResetActivity',
-                'com.vivo.settings/.Settings$FactoryResetActivity'],
-
-    # ── Nokia ──────────────────────────────────────────────────
-    'nokia':   ['com.android.settings/.Settings$FactoryResetActivity',
-                'com.android.settings/.FactoryResetActivity'],
-
-    # ── Motorola / Lenovo ──────────────────────────────────────
+    'honor':  ['com.android.settings/.Settings$FactoryResetActivity',
+               'com.android.settings/.FactoryResetActivity'],
+    'oppo':   ['com.android.settings/.Settings$FactoryResetActivity',
+               'com.coloros.settings/.Settings$FactoryResetActivity'],
+    'realme': ['com.android.settings/.Settings$FactoryResetActivity',
+               'com.android.settings/.FactoryResetActivity'],
+    'oneplus':['com.android.settings/.Settings$FactoryResetActivity',
+               'com.android.settings/.FactoryResetActivity'],
+    'vivo':   ['com.android.settings/.Settings$FactoryResetActivity',
+               'com.vivo.settings/.Settings$FactoryResetActivity'],
+    'nokia':  ['com.android.settings/.Settings$FactoryResetActivity',
+               'com.android.settings/.FactoryResetActivity'],
     'motorola':['com.android.settings/.Settings$FactoryResetActivity',
                 'com.motorola.settings/.Settings$FactoryResetActivity'],
-    'lenovo':  ['com.android.settings/.Settings$FactoryResetActivity'],
-
-    # ── Stock / Pixel / Generic fallback ───────────────────────
+    'lenovo': ['com.android.settings/.Settings$FactoryResetActivity'],
     '_default': [
         'com.android.settings/.Settings$FactoryResetActivity',
         'com.android.settings/.FactoryResetActivity',
@@ -135,7 +135,6 @@ BRAND_RESET = {
     ],
 }
 
-# Manual navigation steps per brand shown to user if automation fails
 BRAND_MANUAL = {
     'infinix': (
         "On your Infinix phone:\n\n"
@@ -146,22 +145,6 @@ BRAND_MANUAL = {
         "  5. Tap  Reset phone\n"
         "  6. Enter your PIN if asked\n"
         "  7. Tap  Erase everything"
-    ),
-    'tecno': (
-        "On your Tecno phone:\n\n"
-        "  1. Open Settings\n"
-        "  2. Tap  General Management  (or  System )\n"
-        "  3. Tap  Reset\n"
-        "  4. Tap  Factory data reset\n"
-        "  5. Tap  Reset  →  Delete all"
-    ),
-    'itel': (
-        "On your Itel phone:\n\n"
-        "  1. Open Settings\n"
-        "  2. Tap  System\n"
-        "  3. Tap  Reset options\n"
-        "  4. Tap  Erase all data (factory reset)\n"
-        "  5. Confirm with your PIN"
     ),
     'samsung': (
         "On your Samsung phone:\n\n"
@@ -189,8 +172,8 @@ BRAND_MANUAL = {
     '_default': (
         "On your phone:\n\n"
         "  1. Open Settings\n"
-        "  2. Tap  System  (or  General Management )\n"
-        "  3. Tap  Reset options  (or  Reset )\n"
+        "  2. Tap  System  (or  General Management)\n"
+        "  3. Tap  Reset options  (or  Reset)\n"
         "  4. Tap  Erase all data (factory reset)\n"
         "  5. Tap  Reset phone\n"
         "  6. Enter your PIN if asked\n"
@@ -207,9 +190,10 @@ class SecureWipeTool:
         self.device_id   = None
         self.device_info = {}
         self.cancelled   = False
+        self.log_id      = None          # DB log ID for this session
         self.log_file    = f"wipe_log_{datetime.now():%Y%m%d_%H%M%S}.txt"
         self.cert_file   = f"wipe_certificate_{datetime.now():%Y%m%d_%H%M%S}.txt"
-        self.win = tk.Tk()
+        self.win         = tk.Tk()
         self._style()
         self._build()
 
@@ -237,23 +221,21 @@ class SecureWipeTool:
         s.map('Red.TButton', background=[('active', '#dc2626')])
         s.configure('TProgressbar', troughcolor=BORDER, background=ACCENT,
                     lightcolor=ACCENT, darkcolor=ACCENT)
-        s.configure('TLabelframe', background=CARD, foreground=MUTED,
-                    relief='flat')
+        s.configure('TLabelframe', background=CARD, foreground=MUTED, relief='flat')
         s.configure('TLabelframe.Label', background=CARD, foreground=MUTED,
                     font=('Segoe UI', 8, 'bold'))
 
     # ── Build UI ───────────────────────────────────────────────
     def _build(self):
-        self.win.title("SecureWipe v5.0")
+        self.win.title("SecureWipe v5.1")
         self.win.geometry("980x780"); self.win.minsize(820, 640)
 
-        # Header
         hdr = tk.Frame(self.win, bg=CARD, height=56)
         hdr.pack(fill=tk.X); hdr.pack_propagate(False)
         tk.Label(hdr, text="🔐  SecureWipe",
                  font=('Segoe UI', 13, 'bold'), bg=CARD, fg=TEXT
                  ).pack(side=tk.LEFT, padx=20, pady=10)
-        tk.Label(hdr, text="v5.0 — Supports all Android brands",
+        tk.Label(hdr, text="v5.1 — Supports all Android brands",
                  font=('Segoe UI', 8), bg=CARD, fg=MUTED
                  ).pack(side=tk.LEFT, pady=16)
         adb_ok = os.path.exists(self.adb) or self.adb == 'adb'
@@ -263,7 +245,6 @@ class SecureWipeTool:
                  font=('Segoe UI', 8, 'bold'), padx=8, pady=3
                  ).pack(side=tk.RIGHT, padx=20, pady=14)
 
-        # Tabs
         nb = ttk.Notebook(self.win)
         nb.pack(fill=tk.BOTH, expand=True, padx=10, pady=(6, 0))
         self.f_android = ttk.Frame(nb, padding=12)
@@ -272,7 +253,6 @@ class SecureWipeTool:
         nb.add(self.f_ios, text="  🍎 iPhone (guided)  ")
         self._build_android(); self._build_ios()
 
-        # Log
         lw = tk.Frame(self.win, bg=BG)
         lw.pack(fill=tk.BOTH, expand=True, padx=10, pady=6)
         tk.Label(lw, text="Operation Log",
@@ -290,6 +270,9 @@ class SecureWipeTool:
         r = tk.Frame(det, bg=CARD); r.pack(fill=tk.X)
         ttk.Button(r, text="🔍  Detect Android Device",
                    command=self.detect_android).pack(side=tk.LEFT)
+        # ── Simulate button (for demo / testing without phone) ──
+        ttk.Button(r, text="🎭  Simulate (Demo)",
+                   command=self._simulate_device).pack(side=tk.LEFT, padx=(8,0))
         self.lbl_status = tk.Label(r, text="No device detected",
                                     bg=CARD, fg=DANGER, font=FH)
         self.lbl_status.pack(side=tk.LEFT, padx=14)
@@ -363,6 +346,27 @@ class SecureWipeTool:
                    style='Green.TButton',
                    command=lambda: self._gen_cert('iphone')).pack(side=tk.LEFT)
 
+    # ── Simulate device (demo mode) ─────────────────────────────
+    def _simulate_device(self):
+        self.device_id = "SIMULATED_DEMO"
+        self.device_info = {
+            'brand':     'Demo',
+            'model':     'SimPhone X1',
+            'version':   '14',
+            'sdk':       '34',
+            'encrypted': True,
+            'mfr':       '_default',
+            'simulated': True,
+        }
+        self.lbl_status.config(text="🎭 Demo Mode Active", fg=WARNING)
+        self.lbl_info.config(text="Demo SimPhone X1 | Android 14 | 🔒 Encrypted (simulated)")
+        self.btn_start.config(state='normal')
+        self._log("─" * 54)
+        self._log("🎭 DEMO MODE — No real device connected.")
+        self._log("   The wipe process will be fully simulated.")
+        self._log("   No real data will be erased.")
+        self._log("─" * 54)
+
     # ── Detection ──────────────────────────────────────────────
     def detect_android(self):
         self._log("─" * 54)
@@ -392,6 +396,7 @@ class SecureWipeTool:
                 self.lbl_status.config(text="❌ No device", fg=DANGER)
                 self.btn_start.config(state='disabled')
                 self._log("❌ Not found. Check cable, USB Debugging, Allow popup.")
+                self._log("   Tip: Try 'Simulate (Demo)' to test without a phone.")
         except FileNotFoundError:
             self._log("❌ adb.exe not found. Place it in the same folder as this tool.")
         except Exception as e:
@@ -412,6 +417,7 @@ class SecureWipeTool:
             'sdk':       prop('ro.build.version.sdk'),
             'encrypted': prop('ro.crypto.state') == 'encrypted',
             'mfr':       prop('ro.product.manufacturer').lower(),
+            'simulated': False,
         }
         info = (f"{self.device_info['brand']} {self.device_info['model']} | "
                 f"Android {self.device_info['version']} | "
@@ -441,28 +447,123 @@ class SecureWipeTool:
             text="✅ iPhone connected" if found else "Not detected — connect USB and tap Trust",
             fg=SUCCESS if found else WARNING)
 
-    # ── Confirm ────────────────────────────────────────────────
+    # ── Confirm + start ────────────────────────────────────────
     def _confirm_start(self):
+        simulated = self.device_info.get('simulated', False)
         model = (f"{self.device_info.get('brand', '')} "
                  f"{self.device_info.get('model', '')}").strip()
-        if not messagebox.askyesno(
-            "⚠️  Confirm",
-            f"FACTORY RESET: {model or self.device_id}\n\n"
-            f"ALL data will be permanently erased.\n"
-            f"This cannot be undone.\n\n"
-            f"Have you backed up everything?\n\nContinue?",
-            icon='warning'):
+        msg = (
+            f"{'[DEMO] ' if simulated else ''}FACTORY RESET: {model or self.device_id}\n\n"
+            + ("This is a SIMULATION — no real data will be erased.\n\n"
+               if simulated else
+               "ALL data will be permanently erased.\nThis cannot be undone.\n\n"
+                               "Have you backed up everything?\n\n")
+            + "Continue?"
+        )
+        if not messagebox.askyesno("⚠️  Confirm", msg, icon='warning'):
             return
         self.cancelled = False
         self.btn_start.config(state='disabled')
-        threading.Thread(target=self._wipe, daemon=True).start()
+        if simulated:
+            threading.Thread(target=self._simulate_wipe, daemon=True).start()
+        else:
+            threading.Thread(target=self._wipe, daemon=True).start()
 
     # ══════════════════════════════════════════════════════════
-    # WIPE PROCESS
+    # SIMULATION WIPE — runs through all steps with fake delays
+    # Restarts itself when done so you can demo again
+    # ══════════════════════════════════════════════════════════
+    def _simulate_wipe(self):
+        model = f"{self.device_info.get('brand','')} {self.device_info.get('model','')}".strip()
+        self._log("\n══ DEMO SIMULATION STARTED ══════════════════════════")
+
+        # Log start to DB (marked as desktop, demo device)
+        self.log_id = post_start('android', f"[DEMO] {model}")
+        if self.log_id:
+            self._log(f"📡 Session logged to database (ID: {self.log_id})")
+        else:
+            self._log("📡 Could not reach server — session not logged online.")
+
+        steps = [
+            ("Step 1/4 — Simulating encryption check …",
+             ["Checking device encryption status …",
+              "✅ Device reports: encrypted (AES-256)",
+              "Encryption key will be destroyed during reset."]),
+            ("Step 2/4 — Simulating factory reset …",
+             ["Opening factory reset settings …",
+              "Sending reset command via ADB …",
+              "Device acknowledging reset …",
+              "⚠️  (In real mode, you confirm on the phone screen)",
+              "✅ Reset sequence initiated."]),
+            ("Step 3/4 — Simulating free space overwrite …",
+             ["Writing zeros to /sdcard …",
+              "Overwriting 4 GB … 25% complete",
+              "Overwriting 4 GB … 50% complete",
+              "Overwriting 4 GB … 75% complete",
+              "✅ Free space overwrite complete."]),
+            ("Step 4/4 — Simulating verification …",
+             ["Reconnecting to device after reset …",
+              "Checking for residual user data …",
+              "Scanning app list … none found",
+              "Scanning account list … none found",
+              "✅ Verification passed — device is clean."]),
+        ]
+
+        for i, (label, log_lines) in enumerate(steps):
+            if self.cancelled: return
+            self.win.after(0, lambda n=i: self._setstep(n, 'active'))
+            self.win.after(0, lambda l=label: self.lbl_prog.config(text=l))
+            self.win.after(0, lambda v=i*25: self.progress.configure(value=v))
+            for line in log_lines:
+                if self.cancelled: return
+                self._log(f"   {line}")
+                time.sleep(0.7)
+            self.win.after(0, lambda n=i: self._setstep(n, 'done'))
+            time.sleep(0.3)
+
+        self.win.after(0, lambda: self.progress.configure(value=100))
+        self.win.after(0, lambda: self.lbl_prog.config(text="✅ SIMULATION COMPLETE"))
+
+        self._log("\n" + "═" * 54)
+        self._log("🎭  DEMO WIPE SIMULATION COMPLETE")
+        self._log("   No real data was erased. This was a demo run.")
+        self._log("═" * 54)
+
+        # Log completion to DB
+        post_complete('android', f"[DEMO] {model}", self.log_id)
+        self._log("📡 Completion logged to database.")
+
+        self._gen_cert('android')
+
+        self.win.after(0, lambda: messagebox.showinfo(
+            "Simulation Complete 🎭",
+            "Demo run finished!\n\n"
+            "All 4 steps simulated successfully:\n"
+            "  ✅ Encryption verified\n"
+            "  ✅ Factory reset simulated\n"
+            "  ✅ Free space overwrite simulated\n"
+            "  ✅ Verification passed\n\n"
+            f"Session logged to DB (ID: {self.log_id or 'N/A'})\n\n"
+            "The tool will now reset for another session."
+        ))
+
+        # ── Auto-restart: reset UI for next use ────────────────
+        self._auto_restart()
+
+    # ══════════════════════════════════════════════════════════
+    # REAL WIPE PROCESS
     # ══════════════════════════════════════════════════════════
     def _wipe(self):
         did = self.device_id
         mfr = self.device_info.get('mfr', '')
+        model = f"{self.device_info.get('brand','')} {self.device_info.get('model','')}".strip()
+
+        # ── Log session start to DB ───────────────────────────
+        self.log_id = post_start('android', model)
+        if self.log_id:
+            self._log(f"📡 Session logged to database (ID: {self.log_id})")
+        else:
+            self._log("📡 Could not reach server — running offline.")
 
         # ── ADB wrappers ─────────────────────────────────────
         def run(*args, timeout=12):
@@ -495,16 +596,12 @@ class SecureWipeTool:
             return out if (ok and '<' in out) else ''
 
         def find_tap(keywords, dump):
-            """Find any of the keywords in the UI dump and tap the element."""
             for kw in keywords:
-                # Match: text="...keyword..." bounds="[x1,y1][x2,y2]"
-                # OR:    content-desc="...keyword..." bounds="[x1,y1][x2,y2]"
                 for attr in ('text', 'content-desc'):
                     pat = (rf'{attr}="[^"]*{re.escape(kw)}[^"]*"'
                            rf'[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"')
                     m = re.search(pat, dump, re.IGNORECASE)
                     if not m:
-                        # bounds may come before the attribute
                         pat2 = (rf'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"'
                                 rf'[^>]*{attr}="[^"]*{re.escape(kw)}[^"]*"')
                         m = re.search(pat2, dump, re.IGNORECASE)
@@ -551,21 +648,18 @@ class SecureWipeTool:
         setp(1, "Step 2/4 — Opening factory reset screen …", 25)
         self._log("\n── STEP 2: FACTORY RESET ────────────────────────────")
 
-        # Determine which brand activity list to use
         brand_key = '_default'
         for key_name in BRAND_RESET:
             if key_name != '_default' and key_name in mfr:
                 brand_key = key_name
                 break
-        self._log(f"Brand detected: {mfr or 'unknown'} → using profile: {brand_key}")
+        self._log(f"Brand: {mfr or 'unknown'} → profile: {brand_key}")
 
         activities = BRAND_RESET[brand_key]
         opened = False
 
-        # ── Attempt 1: direct activity launch ─────────────────
         self._log("Attempting direct Settings launch …")
         for act in activities:
-            pkg, cls = act.split('/')
             ok, out, err = run('shell', 'am', 'start', '-n', act, timeout=10)
             if ok and 'Error' not in out and 'Exception' not in err:
                 self._log(f"   ✅ Opened: {act}")
@@ -575,27 +669,21 @@ class SecureWipeTool:
             else:
                 self._log(f"   ✗ {act}")
 
-        # ── Attempt 2: intent action ───────────────────────────
         if not opened:
             self._log("Direct launch blocked. Trying intent action …")
-            intents = [
+            for args in [
                 ['am', 'start', '-a', 'android.settings.SETTINGS'],
                 ['am', 'start', '-a', 'android.intent.action.MAIN',
                  '-c', 'android.intent.category.HOME'],
-            ]
-            for args in intents:
+            ]:
                 ok, _, _ = run('shell', *args, timeout=8)
                 if ok:
-                    time.sleep(2)
-                    break
+                    time.sleep(2); break
 
-            # ── Attempt 3: UI automation — navigate Settings ────
             self._log("Navigating Settings via UI automation …")
-            key_wake = 224  # KEYCODE_WAKEUP
-            sh(f'input keyevent {key_wake}')
+            sh(f'input keyevent 224')
             time.sleep(1)
 
-            # Navigation path varies by brand
             if brand_key in ('infinix', 'tecno', 'itel'):
                 nav_steps = [
                     (["System", "System settings"],              "System"),
@@ -620,8 +708,7 @@ class SecureWipeTool:
                 ]
             else:
                 nav_steps = [
-                    (["System", "General management",
-                      "About phone"],                            "System/General"),
+                    (["System", "General management", "About phone"], "System/General"),
                     (["Reset options", "Reset", "Backup"],       "Reset options"),
                     (["Erase all data", "Factory data reset",
                       "Factory reset"],                          "Factory reset"),
@@ -635,7 +722,6 @@ class SecureWipeTool:
                 dump = ui_dump()
                 found_item = find_tap(keywords, dump) if dump else False
                 if not found_item:
-                    # Scroll down and try again
                     swipe_up(); time.sleep(1)
                     dump = ui_dump()
                     found_item = find_tap(keywords, dump) if dump else False
@@ -644,19 +730,15 @@ class SecureWipeTool:
                     break
                 opened = True
 
-        # ── Always show manual popup ───────────────────────────
-        # Whether automated or not, we show the user what to do on the phone.
-        # This covers the case where automation got close but didn't finish,
-        # AND is a safety net so the user always knows exactly what to tap.
         manual = BRAND_MANUAL.get(brand_key, BRAND_MANUAL['_default'])
-
-        if opened:
-            intro = ("The factory reset screen should now be open on your phone.\n\n"
-                     "If it looks correct, follow the steps below to confirm.\n"
-                     "If the wrong screen opened, navigate manually:\n\n")
-        else:
-            intro = ("The tool could not open the reset screen automatically.\n\n"
-                     "Please do it manually — it takes about 30 seconds:\n\n")
+        intro = (
+            "The factory reset screen should now be open on your phone.\n\n"
+            "If it looks correct, follow the steps below to confirm.\n"
+            "If the wrong screen opened, navigate manually:\n\n"
+        ) if opened else (
+            "The tool could not open the reset screen automatically.\n\n"
+            "Please do it manually — it takes about 30 seconds:\n\n"
+        )
 
         self.win.after(0, lambda: messagebox.showinfo(
             "👆  Action needed on your phone",
@@ -673,7 +755,7 @@ class SecureWipeTool:
         self._log("Step 2 complete.\n")
         time.sleep(0.3)
 
-        # ── STEP 3: Overwrite free space ──────────────────────
+        # ── STEP 3: Overwrite ─────────────────────────────────
         setp(2, "Step 3/4 — Overwriting free space …", 50)
         self._log("── STEP 3: OVERWRITE ────────────────────────────────")
         self._log("Waiting for phone to come back after reset …")
@@ -714,22 +796,53 @@ class SecureWipeTool:
         self._log("═" * 54)
 
         self._gen_cert('android')
-        self._post_complete()
+        post_complete('android', model, self.log_id)
+        self._log("📡 Completion logged to database.")
 
         self.win.after(0, lambda: messagebox.showinfo(
             "Done ✅",
             "Secure wipe complete!\n\n"
             "The phone has been factory reset.\n"
             "The encryption key was destroyed — data is unrecoverable.\n\n"
-            f"Certificate saved to:\n{self.cert_file}"
+            f"Certificate saved to:\n{self.cert_file}\n\n"
+            f"Session ID: {self.log_id or 'N/A'}\n\n"
+            "The tool will now reset for the next device."
         ))
-        self.win.after(0, lambda: self.btn_start.config(state='normal'))
+
+        # ── Auto-restart for next device ───────────────────────
+        self._auto_restart()
+
+    # ── Auto-restart UI after completion ──────────────────────
+    def _auto_restart(self):
+        """Reset the UI so the tool is ready for another device immediately."""
+        def _reset():
+            time.sleep(1.5)
+            self.device_id   = None
+            self.device_info = {}
+            self.cancelled   = False
+            self.log_id      = None
+            self.log_file    = f"wipe_log_{datetime.now():%Y%m%d_%H%M%S}.txt"
+            self.cert_file   = f"wipe_certificate_{datetime.now():%Y%m%d_%H%M%S}.txt"
+
+            self.win.after(0, lambda: self.lbl_status.config(text="No device detected", fg=DANGER))
+            self.win.after(0, lambda: self.lbl_info.config(text=""))
+            self.win.after(0, lambda: self.btn_start.config(state='disabled'))
+            self.win.after(0, lambda: self.progress.configure(value=0))
+            self.win.after(0, lambda: self.lbl_prog.config(text="Detect a device first"))
+            for i in range(4):
+                self.win.after(0, lambda idx=i: self._setstep(idx, 'idle'))
+
+            self._log("\n" + "─" * 54)
+            self._log("🔄  Tool reset — ready for next device.")
+            self._log("─" * 54)
+
+        threading.Thread(target=_reset, daemon=True).start()
 
     # ── Certificate ────────────────────────────────────────────
     def _gen_cert(self, dtype):
         lines = ["=" * 56, "         SECURE WIPE CERTIFICATE", "=" * 56,
                  f"Date/Time    : {datetime.now():%Y-%m-%d %H:%M:%S}",
-                 f"Tool Version : SecureWipe v5.0",
+                 f"Tool Version : SecureWipe v5.1",
                  f"Device Type  : {dtype.upper()}"]
         if dtype == 'android' and self.device_info:
             lines += [
@@ -738,7 +851,10 @@ class SecureWipeTool:
                 f"Android Ver  : {self.device_info.get('version','?')}",
                 f"Encrypted    : {'Yes' if self.device_info.get('encrypted') else 'No'}",
                 f"Device ID    : {self.device_id}",
+                f"Simulated    : {'Yes (Demo)' if self.device_info.get('simulated') else 'No'}",
             ]
+        if self.log_id:
+            lines.append(f"Session ID   : {self.log_id}")
         lines += ["", "Steps completed:",
                   "  [✓] Encryption verified",
                   "  [✓] Factory reset initiated and confirmed",
@@ -752,17 +868,6 @@ class SecureWipeTool:
             self._log(f"✅ Certificate → {self.cert_file}")
         except Exception as e:
             self._log(f"❌ Certificate error: {e}")
-
-    def _post_complete(self):
-        url = "http://securetool.infinityfreeapp.com/log_completion.php"
-        data = {
-            'device_type':  'android',
-            'device_model': f"{self.device_info.get('brand','')} "
-                            f"{self.device_info.get('model','')}".strip(),
-            'status':       'COMPLETED',
-            'tool_type':    'desktop'
-        }
-        http_post(url, data)
 
     # ── Helpers ────────────────────────────────────────────────
     def _setstep(self, i, state):

@@ -7,10 +7,13 @@ include 'includes/header.php';
 ?>
 
 <div class="guides-container">
-    <!-- Header Section -->
-    <section class="guides-header">
-        <h1>📚 Secure Wiping Guides</h1>
-        <p class="guides-subtitle">Step-by-step instructions for permanently erasing your data</p>
+    <!-- Header Section with Image Banner -->
+    <section class="page-banner" style="--banner-bg: url('https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=1600&q=80');">
+        <div class="page-banner-overlay"></div>
+        <div class="page-banner-content">
+            <h1>📚 Secure Wiping Guides</h1>
+            <p>Step-by-step instructions for permanently erasing your data</p>
+        </div>
     </section>
 
     <!-- Device Tabs -->
@@ -264,7 +267,18 @@ include 'includes/header.php';
         </div>
     </div>
 
-    <!-- Desktop Tool Promotion - FIXED: Both buttons now point to download-tool.php -->
+    <!-- Section image before promo -->
+    <div class="section-with-image" style="max-width:1000px;margin:40px auto;padding:0 24px;">
+        <div class="section-image-wrap">
+            <img src="https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&q=80" alt="USB connection to phone" loading="lazy">
+        </div>
+        <div>
+            <h3 style="margin-bottom:10px;">Want Fully Automated Wiping?</h3>
+            <p style="color:var(--text-secondary,#94a3b8);line-height:1.7;">Skip the manual steps entirely. Our desktop tool connects via USB and handles everything — encryption check, reset, overwrite, and certificate — automatically.</p>
+        </div>
+    </div>
+
+    <!-- Desktop Tool Promotion -->
     <div class="tool-promo-card">
         <div class="promo-content">
             <span class="promo-icon">💻</span>

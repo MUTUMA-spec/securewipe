@@ -28,6 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 include 'includes/header.php';
 ?>
 
+
+<div class="page-hero-banner">
+    <h1>📋 Data Security Survey</h1>
+    <p>Help us understand how people think about phone data before selling</p>
+</div>
 <div class="survey-container">
   <h1>📊 Smartphone Reset Practices Survey</h1>
   <p>Help us understand how people reset their phones before selling. Your responses are anonymous.</p>
