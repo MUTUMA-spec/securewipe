@@ -7,7 +7,7 @@ $_footer_base = (strpos($_SERVER['PHP_SELF'], '/admin/') !== false) ? '../' : ''
       <div class="footer-container">
         <div class="footer-brand">
           <div class="footer-logo">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <svg width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z"/>
             </svg>
           </div>
