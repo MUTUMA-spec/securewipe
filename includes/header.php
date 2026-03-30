@@ -15,9 +15,11 @@ $base = $is_admin_dir ? '../' : '';
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
 </head>
 <body>
+<script>(function(){const s=localStorage.getItem('sw-theme')||'dark';document.documentElement.setAttribute('data-theme',s);})();</script>
 
 <header id="site-header">
   <div class="header-container">
+
     <!-- Logo -->
     <div class="logo">
       <a href="<?= $base ?>index.php">
@@ -33,12 +35,18 @@ $base = $is_admin_dir ? '../' : '';
     <!-- Desktop Nav -->
     <nav>
       <ul class="nav-links">
-        <li><a href="<?= $base ?>index.php" <?= $current_page=='index.php' ? 'class="active"' : '' ?>>Home</a></li>
-        <li><a href="<?= $base ?>guides.php" <?= $current_page=='guides.php' ? 'class="active"' : '' ?>>Guides</a></li>
-        <li><a href="<?= $base ?>secure-erase.php" <?= $current_page=='secure-erase.php' ? 'class="active"' : '' ?>>Erase Tool</a></li>
-        <li><a href="<?= $base ?>survey.php" <?= $current_page=='survey.php' ? 'class="active"' : '' ?>>Survey</a></li>
-        <li><a href="<?= $base ?>feedback.php" <?= $current_page=='feedback.php' ? 'class="active"' : '' ?>>Feedback</a></li>
-        <li><a href="<?= $base ?>downloads.php" <?= $current_page=='downloads.php' ? 'class="active"' : '' ?>>Downloads</a></li>
+        <li><a href="<?= $base ?>index.php"
+               <?= $current_page=='index.php' ? 'class="active"' : '' ?>>Home</a></li>
+        <li><a href="<?= $base ?>guides.php"
+               <?= $current_page=='guides.php' ? 'class="active"' : '' ?>>Why It Matters</a></li>
+        <li><a href="<?= $base ?>secure-erase.php"
+               <?= $current_page=='secure-erase.php' ? 'class="active"' : '' ?>>Erase Tool</a></li>
+        <li><a href="<?= $base ?>survey.php"
+               <?= $current_page=='survey.php' ? 'class="active"' : '' ?>>Survey</a></li>
+        <li><a href="<?= $base ?>feedback.php"
+               <?= $current_page=='feedback.php' ? 'class="active"' : '' ?>>Feedback</a></li>
+        <li><a href="<?= $base ?>downloads.php"
+               <?= $current_page=='downloads.php' ? 'class="active"' : '' ?>>Downloads</a></li>
       </ul>
     </nav>
 
@@ -59,71 +67,44 @@ $base = $is_admin_dir ? '../' : '';
 
       <?php if(function_exists('isAdminLoggedIn') && isAdminLoggedIn()): ?>
       <div class="admin-nav">
-        <a href="<?= $base ?>admin/dashboard.php" class="admin-btn">Dashboard</a>
-        <a href="<?= $base ?>admin/logout.php" class="logout-btn">Logout</a>
+        <a href="<?= $base ?>admin/dashboard.php" class="btn btn-sm">Dashboard</a>
+        <a href="<?= $base ?>admin/logout.php" class="btn btn-sm btn-ghost">Logout</a>
       </div>
-      <?php else: ?>
-      <a href="<?= $base ?>secure-erase.php" class="btn-nav-cta">Erase Now</a>
       <?php endif; ?>
 
-      <!-- Hamburger -->
-      <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">
+      <!-- Mobile menu button -->
+      <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu">
         <span></span><span></span><span></span>
       </button>
     </div>
   </div>
+
+  <!-- Mobile Nav -->
+  <div class="mobile-nav" id="mobileNav">
+    <a href="<?= $base ?>index.php">Home</a>
+    <a href="<?= $base ?>guides.php">Why It Matters</a>
+    <a href="<?= $base ?>secure-erase.php">Erase Tool</a>
+    <a href="<?= $base ?>survey.php">Survey</a>
+    <a href="<?= $base ?>feedback.php">Feedback</a>
+    <a href="<?= $base ?>downloads.php">Downloads</a>
+  </div>
 </header>
 
-<!-- Mobile Nav -->
-<nav class="mobile-nav" id="mobileNav">
-  <a href="<?= $base ?>index.php">Home</a>
-  <a href="<?= $base ?>guides.php">Guides</a>
-  <a href="<?= $base ?>secure-erase.php">Erase Tool</a>
-  <a href="<?= $base ?>survey.php">Survey</a>
-  <a href="<?= $base ?>feedback.php">Feedback</a>
-  <a href="<?= $base ?>downloads.php">Downloads</a>
-</nav>
-
-<main>
 <script>
-(function(){
-  // Theme persistence
-  const saved = localStorage.getItem('sw-theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', saved);
-
-  document.addEventListener('DOMContentLoaded', function() {
-    const btn = document.getElementById('themeToggle');
-    if (btn) {
-      btn.addEventListener('click', function() {
-        const current = document.documentElement.getAttribute('data-theme');
-        const next = current === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('sw-theme', next);
-      });
-    }
-
-    // Mobile menu
-    const mb = document.getElementById('mobileMenuBtn');
-    const mn = document.getElementById('mobileNav');
-    if (mb && mn) {
-      mb.addEventListener('click', function() {
-        mn.classList.toggle('open');
-      });
-    }
-
-    // Scrolled header
-    const header = document.getElementById('site-header');
-    if (header) {
-      window.addEventListener('scroll', function() {
-        header.classList.toggle('scrolled', window.scrollY > 10);
-      }, {passive: true});
-    }
-
-    // Active nav
-    const links = document.querySelectorAll('.nav-links a');
-    links.forEach(function(link) {
-      if (link.href === window.location.href) link.classList.add('active');
-    });
-  });
-})();
+// Theme toggle
+document.getElementById('themeToggle').addEventListener('click', function() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('sw-theme', next);
+});
+// Mobile menu
+document.getElementById('mobileMenuBtn').addEventListener('click', function() {
+  document.getElementById('mobileNav').classList.toggle('open');
+  this.classList.toggle('open');
+});
+// Active link highlighting
+const links = document.querySelectorAll('.nav-links a, .mobile-nav a');
+links.forEach(link => {
+  if (link.href === window.location.href) link.classList.add('active');
+});
 </script>
