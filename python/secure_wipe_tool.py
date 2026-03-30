@@ -389,7 +389,32 @@ class SecureWipeTool:
                     found = True
                     self.lbl_status.config(text="✅ Connected", fg=SUCCESS)
                     self.btn_start.config(state='normal')
-                    self._fetch_info(); break
+                    self._fetch_info()
+
+                    # ── FORCE RESTART DEMO ──────────────────────────────
+                    # Immediately attempt to reboot the phone via ADB.
+                    # This demonstrates the tool is actively communicating
+                    # with the device. Android security will still require
+                    # the user to physically confirm a full factory reset.
+                    self._log("─" * 54)
+                    self._log("⚡ FORCE RESTART ATTEMPT via ADB")
+                    self._log("   Sending 'adb reboot' command to device …")
+                    try:
+                        reboot_result = subprocess.run(
+                            [self.adb, '-s', self.device_id, 'reboot'],
+                            capture_output=True, text=True, timeout=8)
+                        if reboot_result.returncode == 0:
+                            self._log("   ✅ Reboot command accepted — phone is restarting.")
+                            self._log("   (Android allowed this because USB Debugging is on.)")
+                        else:
+                            self._log(f"   ⚠️  Reboot command rejected: {reboot_result.stderr.strip() or 'no error detail'}")
+                            self._log("   Android security is actively blocking unauthorised commands.")
+                    except subprocess.TimeoutExpired:
+                        self._log("   ⏱  Reboot command timed out — Android blocked it.")
+                    except Exception as e:
+                        self._log(f"   ❌ Could not send reboot: {e}")
+                    self._log("─" * 54)
+                    break
                 if len(parts) >= 2 and parts[1] == 'unauthorized':
                     self._log("⚠️  Tap ALLOW on the phone for USB Debugging")
             if not found:

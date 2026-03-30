@@ -1,4 +1,8 @@
-    </main>
+<?php
+// Resolve base path for footer links (works from root and /admin/)
+$_footer_base = (strpos($_SERVER['PHP_SELF'], '/admin/') !== false) ? '../' : '';
+?>
+    </main><!-- /.page-content -->
     <footer class="site-footer">
       <div class="footer-container">
         <div class="footer-brand">
@@ -10,12 +14,12 @@
           <span>SecureWipe</span>
         </div>
         <nav class="footer-nav">
-          <a href="index.php">Home</a>
-          <a href="guides.php">Why It Matters</a>
-          <a href="secure-erase.php">Erase Tool</a>
-          <a href="survey.php">Survey</a>
-          <a href="feedback.php">Feedback</a>
-          <a href="downloads.php">Downloads</a>
+          <a href="<?= $_footer_base ?>index.php">Home</a>
+          <a href="<?= $_footer_base ?>guides.php">Why It Matters</a>
+          <a href="<?= $_footer_base ?>secure-erase.php">Erase Tool</a>
+          <a href="<?= $_footer_base ?>survey.php">Survey</a>
+          <a href="<?= $_footer_base ?>feedback.php">Feedback</a>
+          <a href="<?= $_footer_base ?>downloads.php">Downloads</a>
         </nav>
         <div class="footer-copy">
           &copy; <?php echo date('Y'); ?> SecureWipe &mdash;
@@ -23,6 +27,5 @@
         </div>
       </div>
     </footer>
-  </main>
 </body>
 </html>

@@ -89,6 +89,7 @@ $base = $is_admin_dir ? '../' : '';
     <a href="<?= $base ?>downloads.php">Downloads</a>
   </div>
 </header>
+<main class="page-content">
 
 <script>
 // Theme toggle

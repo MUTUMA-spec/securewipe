@@ -101,9 +101,6 @@ if ($result) {
         </div>
     </div>
     <div class="section-header">
-        <h2>The Hard Truth About Factory Resets</h2>
-        <p class="section-subtitle">What you don't know could cost you your privacy</p>
-    </div>
     
     <div class="problem-grid">
         <div class="problem-card">

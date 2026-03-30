@@ -52,7 +52,7 @@ if ($is_localhost) {
 // ============================================
 // DATABASE CONNECTION
 // ============================================
-$conn = mysqli_connect('sql300.infinityfree.com', 'if0_41357689', 'vKCHsglbhLBP', 'if0_41357689_securetool_db');
+$conn = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 // Check connection
 if (!$conn) {
     // Log error but don't show details to users
