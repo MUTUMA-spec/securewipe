@@ -100,7 +100,7 @@ include 'includes/header.php';
         </div>
       </div>
       <div class="dl-exe-buttons">
-        <a href="<?= $github_exe_url ?>" class="dl-btn dl-btn-green">
+        <a href="download-proxy.php" class="dl-btn dl-btn-green">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>

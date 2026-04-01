@@ -325,7 +325,7 @@ R58M31XXXXX    device</div>
           <h3 style="font-family:var(--font-display);font-size:1.2rem;color:var(--text-primary);margin-bottom:4px">secure_wipe_tool.py</h3>
           <p style="color:var(--text-muted);font-size:.875rem">The SecureWipe desktop application · ~50 KB Python script</p>
         </div>
-        <a href="python/secure_wipe_tool.py" class="btn btn-success" download>
+        <a href="download-proxy.php" class="btn btn-success" download>
           ⬇️ Download Tool
         </a>
       </div>

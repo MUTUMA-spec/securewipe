@@ -44,29 +44,12 @@ def http_post(url, data, timeout=6):
         return None
 
 def post_start(device_type, device_model):
-    """Log session start to DB; returns log_id or None."""
-    resp = http_post(f"{BASE_URL}/log_erase_start.php", {
-        'device_type':  device_type,
-        'device_model': device_model,
-        'tool_type':    'desktop'
-    })
-    if resp:
-        try:
-            data = json.loads(resp)
-            return data.get('log_id')
-        except Exception:
-            pass
+    """Logging now handled by download-proxy.php on the website."""
     return None
 
 def post_complete(device_type, device_model, log_id=None):
-    """Log session completion to DB."""
-    http_post(f"{BASE_URL}/log_completion.php", {
-        'device_type':  device_type,
-        'device_model': device_model,
-        'status':       'COMPLETED',
-        'tool_type':    'desktop',
-        'log_id':       log_id
-    })
+    """Logging now handled by download-proxy.php on the website."""
+    pass
 
 # ── Colours ────────────────────────────────────────────────────
 BG = "#0e1420"; CARD = "#141a28"; ACCENT = "#0ea5e9"

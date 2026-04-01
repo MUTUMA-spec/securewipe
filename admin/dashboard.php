@@ -72,15 +72,15 @@ while ($row = mysqli_fetch_assoc($result)) {
         </div>
         
         <div class="admin-stat-card">
-            <div class="admin-stat-icon">🛡️</div>
+            <div class="admin-stat-icon">⬇️</div>
             <div class="admin-stat-value"><?php echo $stats['erase_logs']; ?></div>
-            <div class="admin-stat-label">Erase Tool Uses</div>
+            <div class="admin-stat-label">Tool Downloads</div>
         </div>
         
         <div class="admin-stat-card">
-            <div class="admin-stat-icon">📈</div>
-            <div class="admin-stat-value"><?php echo $completion_rate; ?>%</div>
-            <div class="admin-stat-label">Completion Rate</div>
+            <div class="admin-stat-icon">🌐</div>
+            <div class="admin-stat-value"><?php echo isset($tool_stats['web']) ? $tool_stats['web'] : 0; ?></div>
+            <div class="admin-stat-label">Web Tool Sessions</div>
         </div>
     </div>
 
@@ -125,23 +125,23 @@ while ($row = mysqli_fetch_assoc($result)) {
         <!-- Tool Usage Section -->
         <div class="admin-section">
             <div class="admin-section-header">
-                <h2>⚙️ Tool Usage (Web vs Desktop)</h2>
+                <h2>⚙️ Tool Usage (Web vs Desktop Downloads)</h2>
             </div>
             <div class="admin-table-container">
                 <table class="admin-table">
                     <thead>
                         <tr>
-                            <th>Tool Type</th>
-                            <th>Usage Count</th>
+                            <th>Tool</th>
+                            <th>Count</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($tool_stats as $type => $count): ?>
                         <tr>
                             <td>
-                                <?php 
-                                $icon = ($type == 'web') ? '🌐' : '💻';
-                                echo $icon . ' ' . ucfirst($type); 
+                                <?php
+                                if ($type === 'web') echo '🌐 Web Tool (sessions)';
+                                else                 echo '⬇️ Desktop Tool (downloads)';
                                 ?>
                             </td>
                             <td><span class="admin-badge admin-badge-success"><?php echo $count; ?></span></td>
@@ -262,7 +262,7 @@ while ($row = mysqli_fetch_assoc($result)) {
             <a href="view-surveys.php" class="btn btn-primary" style="padding: 12px 24px;">📊 View All Surveys</a>
             <a href="view-feedback.php" class="btn btn-primary" style="padding: 12px 24px;">💬 Moderate Feedback</a>
             <a href="view-erase-logs.php" class="btn btn-primary" style="padding: 12px 24px;">🌐 Web Tool Logs</a>
-            <a href="view-desktop-logs.php" class="btn btn-success" style="padding: 12px 24px;">💻 Desktop Tool Logs</a>
+            <a href="view-desktop-logs.php" class="btn btn-success" style="padding: 12px 24px;">⬇️ Desktop Downloads</a>
         </div>
     </div>
 </div>
