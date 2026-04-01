@@ -25,7 +25,7 @@ if ($is_localhost) {
     // --- LOCAL DEVELOPMENT SETTINGS ---
     define('DB_HOST', 'localhost');
     define('DB_USER', 'root');
-    define('DB_PASS', 'vKCHsglbhLBP');
+    define('DB_PASS', '');
     define('DB_NAME', 'secure_wipe_education');
     define('SITE_URL', 'http://localhost/secure-wipe-website');
     define('SITE_NAME', 'Secure Data Wiping Education');
@@ -39,7 +39,7 @@ if ($is_localhost) {
     // YOUR INFINITYFREE DATABASE DETAILS
     define('DB_HOST', 'sql300.infinityfree.com');      // From your screenshot
     define('DB_USER', 'if0_41357689');                 // From your screenshot
-    define('DB_PASS', '‎vKCHsglbhLBP');                 // From your screenshot
+    define('DB_PASS', 'vKCHsg1bhLBP');                 // From your screenshot
     define('DB_NAME', 'if0_41357689_securetool_db');   // From your screenshot
     define('SITE_URL', 'http://securetool.infinityfreeapp.com'); // Your domain
     define('SITE_NAME', 'Secure Data Wiping Education');
