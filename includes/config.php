@@ -25,7 +25,7 @@ if ($is_localhost) {
     // --- LOCAL DEVELOPMENT SETTINGS ---
     define('DB_HOST', 'localhost');
     define('DB_USER', 'root');
-    define('DB_PASS', '');
+    define('DB_PASS', 'vKCHsglbhLBP');
     define('DB_NAME', 'secure_wipe_education');
     define('SITE_URL', 'http://localhost/secure-wipe-website');
     define('SITE_NAME', 'Secure Data Wiping Education');
